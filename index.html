@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nebula Farm | Architect Update</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="loader"><div class="spinner"></div><p>CARREGANDO MUNDO...</p></div>
+
+    <main id="game-ui">
+        <header class="game-header">
+            <div class="user-stats">
+                <div class="lvl-badge">LVL <span id="lvl">1</span></div>
+                <div class="xp-container"><div id="xp-bar" class="xp-fill"></div></div>
+            </div>
+            <div class="coin-pill">💰 $<span id="money">0</span></div>
+        </header>
+
+        <div id="mission-board">
+            <h4>📋 PEDIDO ESPECIAL</h4>
+            <p id="mission-text">Colha 5 Trigos</p>
+            <button onclick="gameInstance.completeMission()" id="btn-mission">ENTREGAR</button>
+        </div>
+
+        <aside class="side-panel">
+            <div class="silo-status">🧺 SILO: <span id="silo-text">0/50</span></div>
+            <div class="inventory-list">
+                <div>🍎 <span id="qty-apple">0</span></div>
+                <div>🍊 <span id="qty-orange">0</span></div>
+                <div>🥚 <span id="qty-egg">0</span></div>
+                <div>🥛 <span id="qty-milk">0</span></div>
+                <div>🥓 <span id="qty-bacon">0</span></div>
+                <div style="color: #e67e22;">🍞 <span id="qty-bread">0</span></div>
+                <div style="color: #f1c40f;">🧀 <span id="qty-cheese">0</span></div>
+                <div style="color: #4fc3f7;">🐟 <span id="qty-fish">0</span></div>
+                <div style="margin-top: 5px; color: #FFD700;">🥣 <span id="qty-feed-inv">5</span></div>
+            </div>
+            <button class="btn-market" onclick="gameInstance.openMarket()">🏪 MERCADO</button>
+        </aside>
+
+        <div id="bubble-menu"></div>
+        
+        <div id="placement-ui" class="hidden">
+            <button class="place-btn cancel" onclick="gameInstance.cancelPlacement()">❌ CANCELAR</button>
+            <button class="place-btn confirm" id="btn-confirm-place" onclick="gameInstance.confirmPlacement()">✅ CONSTRUIR</button>
+        </div>
+    </main>
+
+    <div id="market-modal" class="modal-hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🏪 MERCADO</h2>
+                <div class="market-balance">Saldo: 💰 $<span id="mkt-money">0</span></div>
+                <button class="close-btn" onclick="gameInstance.closeMarket()">X</button>
+            </div>
+            
+            <div class="market-grid">
+                <div class="market-section">
+                    <h3>💰 Vender (No Silo)</h3>
+                    <div class="sell-grid">
+                        <button class="market-item" onclick="gameInstance.sellItem('wheat')">🌾 Trigo (<span id="mkt-qty-wheat">0</span>) <b>$2</b></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('carrot')">🥕 Cenoura (<span id="mkt-qty-carrot">0</span>) <b>$5</b></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('corn')">🌽 Milho (<span id="mkt-qty-corn">0</span>) <b>$12</b></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('egg')">🥚 Ovo (<span id="mkt-qty-egg">0</span>) <b>$8</b></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('milk')">🥛 Leite (<span id="mkt-qty-milk">0</span>) <b>$15</b></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('bacon')">🥓 Bacon (<span id="mkt-qty-bacon">0</span>) <b>$20</b></button>
+                        <button class="market-item" style="border-color: #e67e22;" onclick="gameInstance.sellItem('bread')">🍞 Pão (<span id="mkt-qty-bread">0</span>) <b>$35</b></button>
+                        <button class="market-item" style="border-color: #f1c40f;" onclick="gameInstance.sellItem('cheese')">🧀 Queijo (<span id="mkt-qty-cheese">0</span>) <b>$45</b></button>
+                        <button class="market-item" style="border-color: #2980b9;" onclick="gameInstance.sellItem('fish')">🐟 Peixe (<span id="mkt-qty-fish">0</span>) <b>$25</b></button>
+                    </div>
+                </div>
+                
+                <div class="market-section">
+                    <h3>🌱 Sementes e Mudas</h3>
+                    <button class="market-item buy-seed" onclick="gameInstance.buySeed('wheat', 5, 5)">🌾 5x Trigo ($5)</button>
+                    <button class="market-item buy-seed" onclick="gameInstance.buySeed('carrot', 5, 15)">🥕 5x Cenoura ($15)</button>
+                    <button class="market-item buy-seed" onclick="gameInstance.buySeed('corn', 5, 40)">🌽 5x Milho ($40)</button>
+                    <button class="market-item buy-seed" onclick="gameInstance.buySeed('apple', 2, 30)">🍎 2x Macieira ($30)</button>
+                    <button class="market-item buy-seed" onclick="gameInstance.buySeed('orange', 2, 50)">🍊 2x Laranjeira ($50)</button>
+                </div>
+
+                <div class="market-section">
+                    <h3>🏭 Fábricas (Construção)</h3>
+                    <button class="market-item upgrade" id="btn-bakery" onclick="gameInstance.buyBuilding('bakery', 300)">🍞 Padaria ($300)</button>
+                    <button class="market-item upgrade" id="btn-dairy" onclick="gameInstance.buyBuilding('dairy', 500)">🧀 Laticínio ($500)</button>
+                </div>
+
+                <div class="market-section">
+                    <h3>🐾 Animais</h3>
+                    <button class="market-item upgrade" id="btn-coop" onclick="gameInstance.buyBuilding('coop', 200)">🐔 Galinheiro ($200)</button>
+                    <button class="market-item upgrade" id="btn-pigpen" onclick="gameInstance.buyBuilding('pigpen', 400)">🐷 Chiqueiro ($400)</button>
+                    <button class="market-item upgrade" id="btn-corral" onclick="gameInstance.buyBuilding('corral', 800)">🐮 Curral ($800)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
