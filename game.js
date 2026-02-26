@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - ANTI-CRASH UI UPDATE
- * Interface Blindada contra erros de "innerText null" + Modo Arquiteto.
+ * NEBULA FARM PRO - ULTIMATE ARCHITECT UPDATE
+ * O Retorno do Moinho + Correção do Eixo + Construção com Grade!
  */
 
 class NebulaFarmPro {
@@ -135,14 +135,18 @@ class NebulaFarmPro {
         this.scene.add(this.grass);
         
         // Áreas que você NÃO pode construir em cima!
-        this.obstacles.push({ x: -22, z: -15, r: 8 }); 
-        this.obstacles.push({ x: 22, z: -10, r: 8 });  
-        this.obstacles.push({ x: 35, z: 25, r: 14 });  
-        this.obstacles.push({ x: 0, z: 0, r: 12 });    
+        this.obstacles.push({ x: -22, z: -15, r: 8 }); // Celeiro
+        this.obstacles.push({ x: 22, z: -10, r: 8 });  // Casa
+        this.obstacles.push({ x: 35, z: 25, r: 14 });  // Lago
+        this.obstacles.push({ x: 0, z: 0, r: 12 });    // Terra Arada
+        this.obstacles.push({ x: -22, z: 10, r: 6 });  // O MOINHO VOLTOU PARA OS OBSTÁCULOS!
         
         this.createBarn(-22, -15); 
         this.createFarmhouse(22, -10); 
         this.createLake(35, 25);
+        
+        // CHAMANDO O MOINHO DE VOLTA PRO JOGO!
+        this.createWindmill(-22, 10); 
 
         this.renderGrid(); 
         
@@ -276,8 +280,19 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // FÁBRICAS E CONSTRUÇÕES
+    // FÁBRICAS, MOINHO E CONSTRUÇÕES
     // ==========================================
+    
+    // O MOINHO VOLTOU!
+    createWindmill(x, z) {
+        const windmill = new THREE.Group();
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 15, 8), new THREE.MeshStandardMaterial({color: 0x8d6e63})); tower.position.y = 7.5; tower.castShadow = true;
+        const blades = new THREE.Group();
+        for(let i=0; i<4; i++) { const blade = new THREE.Mesh(new THREE.BoxGeometry(1, 10, 0.2), new THREE.MeshStandardMaterial({color: 0xffffff})); blade.position.y = 5; const pivot = new THREE.Group(); pivot.rotation.z = (Math.PI / 2) * i; pivot.add(blade); blades.add(pivot); }
+        blades.position.set(0, 14, 2.5); windmill.add(tower, blades); windmill.position.set(x, 0, z); this.scene.add(windmill);
+        this.animations.push(() => { blades.rotation.z -= 0.015; }); 
+    }
+
     createDairy(x, z) {
         const dairyGroup = new THREE.Group();
         const baseMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.8 }); 
@@ -465,7 +480,7 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // SISTEMA DE INTERAÇÃO E CÂMERA (FIXA)
+    // SISTEMA DE INTERAÇÃO (COM O PAN CORRIGIDO)
     // ==========================================
     setupInteractions() {
         const raycaster = new THREE.Raycaster();
