@@ -883,12 +883,40 @@ class NebulaFarmPro {
         this.saveToCloud(true); // SALVA IMEDIATAMENTE NA NUVEM!
     }
 
+  // SISTEMA BLINDADO DE PLANTAR ÁRVORES (Com colisão)
     plantTree(point, seedType) {
+        // 1. O NOVO RADAR DE COLISÃO: Verifica se tem algo construído aqui
+        let hasCollision = false;
+        for (const obs of this.obstacles) {
+            // Calcula a distância do clique para o centro da construção/terra arada
+            const dist = Math.sqrt(Math.pow(point.x - obs.x, 2) + Math.pow(point.z - obs.z, 2));
+            // Dá uma "margem de segurança" de 2 metros pra árvore não entrar na parede
+            if (dist < (obs.r + 2)) { 
+                hasCollision = true; break; 
+            }
+        }
+        
+        // Se bateu em algo, cancela o plantio e avisa o jogador!
+        if (hasCollision) {
+            this.spawnFX(window.innerWidth / 2, window.innerHeight / 2, "❌ LOCAL INVÁLIDO!", "#F44336");
+            return;
+        }
+
+        // 2. SE O TERRENO ESTIVER LIVRE, PLANTA A ÁRVORE!
         if (this.state.inventory[seedType] <= 0) return;
-        this.state.inventory[seedType]--; const conf = this.config[seedType];
-        const mesh = new THREE.Group(); const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
-        const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 0), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
-        mesh.add(trunk, leaves); mesh.position.set(point.x, 0, point.z); this.scene.add(mesh);
+        this.state.inventory[seedType]--; 
+        
+        const conf = this.config[seedType];
+        const mesh = new THREE.Group(); 
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 1.5), new THREE.MeshStandardMaterial({color: 0x5d4037})); 
+        trunk.position.y = 0.75;
+        const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 0), new THREE.MeshStandardMaterial({color: conf.leafColor})); 
+        leaves.position.y = 2;
+        
+        mesh.add(trunk, leaves); 
+        mesh.position.set(point.x, 0, point.z); 
+        this.scene.add(mesh);
+        
         this.plants.push({ mesh: mesh, type: seedType, plantedAt: Date.now(), progress: 0 }); 
         this.updateUI();
         this.saveToCloud(true); // SALVA IMEDIATAMENTE NA NUVEM!
@@ -1079,4 +1107,5 @@ window.addEventListener('resize', () => {
         window.gameInstance.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 });
+
 
