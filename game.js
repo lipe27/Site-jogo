@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - GOOGLE LOGIN & EXACT POSITION SAVE
- * Login real e as fábricas agora ficam "grudadas" onde você construiu!
+ * NEBULA FARM PRO - FLUXO DE LOGIN PROFISSIONAL
+ * A fazenda e a UI só carregam se o jogador estiver 100% autenticado.
  */
 
 window.onerror = function(message, source, lineno) {
@@ -8,7 +8,7 @@ window.onerror = function(message, source, lineno) {
     return false;
 };
 
-// 1. CONEXÃO COM O FIREBASE
+// CONEXÃO COM O FIREBASE
 const firebaseConfig = {
     apiKey: "AIzaSyCCnMspqNoKarOxZxXzaWACNxIV-mi3qNQ",
     authDomain: "nebulafarm-db.firebaseapp.com",
@@ -64,13 +64,12 @@ class NebulaFarmPro {
         this.isFishing = false;
         this.timeOfDay = 1.5; 
         
-        this.currentUser = null; // Guardará as info do jogador logado pelo Google
+        this.currentUser = null; 
 
         this.state = {
             money: 1000, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
             inventory: { wheat: 10, carrot: 10, corn: 0, apple: 0, orange: 0, egg: 0, milk: 0, bacon: 0, feed: 5, fish: 0, bread: 0, cheese: 0 },
             unlocked: { wheat: true, carrot: true, corn: false, apple: false, orange: false },
-            // NOVO MODELO: Agora o enclosure guarda { built: true, x: 10, z: -10 }
             enclosures: { coop: false, pigpen: false, corral: false, mill: false, bakery: false, dairy: false },
             gridSize: 6, currentMission: null
         };
@@ -99,9 +98,9 @@ class NebulaFarmPro {
     }
 
     init() {
-        if (!auth) return this.startGame(); // Failsafe se estiver sem net
+        if (!auth) return this.startGame(); // Se rodar sem net, abre local
 
-        // Escuta as mudanças de conta do Google
+        // A MÁGICA DA AUTENTICAÇÃO
         auth.onAuthStateChanged((user) => {
             const loader = document.getElementById('loader');
             const loginModal = document.getElementById('login-modal');
@@ -112,33 +111,33 @@ class NebulaFarmPro {
                 if(loginModal) loginModal.style.display = 'none';
                 if(loader) {
                     loader.style.display = 'flex';
-                    document.getElementById('loading-text').innerText = "CARREGANDO SUA FAZENDA...";
+                    document.getElementById('loading-text').innerText = "BAIXANDO DADOS DA FAZENDA...";
                 }
-                this.initCloud(); // Busca o save desse usuário no banco
+                this.initCloud(); 
             } else {
-                // NÃO ESTÁ LOGADO
+                // DESLOGADO: MOSTRA A TELA INICIAL
                 if(loader) loader.style.display = 'none';
                 if(loginModal) loginModal.style.display = 'flex';
             }
         });
 
-        // Configura o botão do Google
+        // Configura o clique no botão do Google
         const btnGoogle = document.getElementById('btn-google-login');
         if (btnGoogle) {
             btnGoogle.addEventListener('click', () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 auth.signInWithPopup(provider).catch((error) => {
-                    alert("Erro no login: " + error.message);
+                    console.error("Erro no login: ", error);
                 });
             });
         }
 
-        // Configura o botão de Sair
+        // Configura o clique no botão de Sair
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) {
             btnLogout.addEventListener('click', () => {
                 auth.signOut().then(() => {
-                    window.location.reload(); // Recarrega a página ao sair
+                    window.location.reload(); // Recarrega a página para zerar o cache!
                 });
             });
         }
@@ -147,7 +146,6 @@ class NebulaFarmPro {
     initCloud() {
         if (!db || !this.currentUser) return this.startGame();
 
-        // Agora o ID da fazenda é a ID oficial do Google do jogador! Totalmente seguro.
         db.collection("fazendas").doc(this.currentUser.uid).get().then((doc) => {
             if (doc.exists) {
                 console.log("Save Encontrado!");
@@ -172,6 +170,10 @@ class NebulaFarmPro {
 
     startGame() {
         try {
+            // MOSTRAMOS A UI DO JOGO SOMENTE AGORA!
+            const ui = document.getElementById('game-ui');
+            if(ui) ui.style.display = 'block';
+
             this.setupCore();
             this.setupLights();
             this.buildWorld();
@@ -201,6 +203,7 @@ class NebulaFarmPro {
         this.camera = new THREE.OrthographicCamera(-18 * aspect, 18 * aspect, 18, -18, 1, 1000);
         this.camera.position.set(50, 50, 50);
         this.camera.lookAt(0, 0, 0);
+        
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
@@ -234,9 +237,7 @@ class NebulaFarmPro {
         this.createLake(35, 25);
         this.createWindmill(-22, 10); 
 
-        // CRÍTICO: Constroi as fábricas exatamente nas coordenadas salvas na nuvem!
         if (this.state.enclosures.bakery) { 
-            // Antigamente o state era true/false. Se for o state antigo, spawna num lugar padrão. Se for o novo, spawna no lugar exato!
             let x = 5, z = -25;
             if (this.state.enclosures.bakery.x !== undefined) { x = this.state.enclosures.bakery.x; z = this.state.enclosures.bakery.z; }
             this.createBakery(x, z); 
@@ -251,7 +252,6 @@ class NebulaFarmPro {
             this.obstacles.push({ x: x, z: z, r: 5 });
         }
         
-        // Carrega Animais nos lugares corretos também
         if (this.state.enclosures.coop) {
             let x = 10, z = -22; if (this.state.enclosures.coop.x !== undefined) { x = this.state.enclosures.coop.x; z = this.state.enclosures.coop.z; }
             this.buildEnclosureOld('coop', x, z); const b = document.getElementById('btn-coop'); if(b) b.style.display = 'none'; this.obstacles.push({ x, z, r: 6 });
@@ -306,13 +306,12 @@ class NebulaFarmPro {
         const px = this.placementGhost.position.x; 
         const pz = this.placementGhost.position.z;
 
-        // O SEGREDO: Salva no banco as coordenadas X e Z exatas!
         this.state.enclosures[this.placementType] = { built: true, x: px, z: pz };
-
         this.obstacles.push({ x: px, z: pz, r: 5 });
+        
         this.cancelPlacement(); this.updateUI();
         this.createConstructionSite(this.placementType, px, pz, 5000);
-        this.saveToCloud(); // Salva a posição nova na nuvem na mesma hora
+        this.saveToCloud(); 
     }
 
     validatePlacementPosition(x, z) {
@@ -662,10 +661,7 @@ class NebulaFarmPro {
         return `<div class="bubble-item ${lockedClass}" data-tool="${tool}">${icon}<small>${textOverride}</small></div>`;
     }
 
-    hideBubble() { 
-        const b = document.getElementById('bubble-menu');
-        if(b) b.style.display = 'none'; 
-    }
+    hideBubble() { const b = document.getElementById('bubble-menu'); if(b) b.style.display = 'none'; }
 
     applyDragTool(raycaster, x, y) {
         if (this.activeDragTool === 'bake_bread' || this.activeDragTool === 'make_cheese') {
