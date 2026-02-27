@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - CUSTOM LOGIN & CLOUD SAVE
- * Substitui o "prompt" nativo pela tela inicial bonita e salva no Firebase
+ * NEBULA FARM PRO - CLOUD & DAYTIME FIX ☀️☁️
+ * O jogo agora começa de DIA e tem blindagem máxima contra erros de carregamento!
  */
 
 const firebaseConfig = {
@@ -49,7 +49,9 @@ class NebulaFarmPro {
         this.placementIsValid = false;
 
         this.isFishing = false;
-        this.timeOfDay = 0;
+        
+        // CORREÇÃO: Começa com o Sol no topo do céu (1.5 radianos = Meio-dia)
+        this.timeOfDay = 1.5; 
         
         this.farmName = null;
 
@@ -86,35 +88,38 @@ class NebulaFarmPro {
 
     init() {
         try {
-            this.farmName = localStorage.getItem('nebulafarm_savename') || null;
+            // Proteção extra caso o navegador bloqueie o LocalStorage
+            try { this.farmName = localStorage.getItem('nebulafarm_savename') || null; } catch(e) { this.farmName = null; }
+            
             const loader = document.getElementById('loader');
 
             if (!this.farmName) {
-                // Se não tem save, esconde a tela azul de loading e mostra a de Início!
                 if(loader) loader.style.display = 'none';
                 
                 const loginModal = document.getElementById('login-modal');
-                loginModal.style.display = 'flex';
+                if(loginModal) loginModal.style.display = 'flex';
 
                 document.getElementById('btn-start-game').addEventListener('click', () => {
                     let val = document.getElementById('farm-name-input').value.trim();
                     if (!val) val = "Fazenda1";
                     this.farmName = val.replace(/\s+/g, '').toUpperCase();
-                    localStorage.setItem('nebulafarm_savename', this.farmName);
                     
-                    loginModal.style.display = 'none';
+                    try { localStorage.setItem('nebulafarm_savename', this.farmName); } catch(e){}
+                    
+                    if(loginModal) loginModal.style.display = 'none';
                     if(loader) {
                         loader.style.display = 'flex';
-                        document.getElementById('loading-text').innerText = "CONECTANDO À NUVEM...";
+                        const txt = document.getElementById('loading-text');
+                        if(txt) txt.innerText = "CONECTANDO À NUVEM...";
                     }
                     this.initCloud();
                 });
             } else {
-                // Já tem save, vai direto pra nuvem
                 this.initCloud();
             }
         } catch (e) {
             console.error("Erro na Inicialização:", e);
+            alert("Erro ao iniciar a tela de login: " + e.message);
         }
     }
 
@@ -133,7 +138,8 @@ class NebulaFarmPro {
             this.startGame();
         }).catch((erro) => {
             console.error("Sem conexão:", erro);
-            this.startGame();
+            // Mesmo se der erro no Firebase, o jogo abre no modo offline pra você não ficar preso!
+            this.startGame(); 
         });
     }
 
@@ -147,23 +153,30 @@ class NebulaFarmPro {
     }
 
     startGame() {
-        this.setupCore();
-        this.setupLights();
-        this.buildWorld();
-        this.setupInteractions();
-        if(!this.state.currentMission) this.generateMission(); 
-        this.updateUI();
-        
-        const loader = document.getElementById('loader');
-        if(loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 500);
-        }
-        
-        // Auto-save a cada 30 seg
-        setInterval(() => { this.saveToCloud(true); }, 30000);
+        // Blindagem total: Se algo quebrar aqui, ele te avisa com um alerta!
+        try {
+            this.setupCore();
+            this.setupLights();
+            this.buildWorld();
+            this.setupInteractions();
+            if(!this.state.currentMission) this.generateMission(); 
+            this.updateUI();
+            
+            const loader = document.getElementById('loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+            
+            // Auto-save a cada 30 seg
+            setInterval(() => { this.saveToCloud(true); }, 30000);
 
-        requestAnimationFrame((time) => this.animate(time));
+            requestAnimationFrame((time) => this.animate(time));
+            
+        } catch(erroGrave) {
+            console.error(erroGrave);
+            alert("🚨 ERRO FATAL AO MONTAR O MUNDO:\n" + erroGrave.message);
+        }
     }
 
     setupCore() {
@@ -213,8 +226,17 @@ class NebulaFarmPro {
         this.createLake(35, 25);
         this.createWindmill(-22, 10); 
 
-        if (this.state.enclosures.bakery) { this.createBakery(5, -25); document.getElementById('btn-bakery').style.display = 'none'; }
-        if (this.state.enclosures.dairy) { this.createDairy(15, -25); document.getElementById('btn-dairy').style.display = 'none'; }
+        // Proteção contra erro se o botão do mercado não for encontrado
+        if (this.state.enclosures.bakery) { 
+            this.createBakery(5, -25); 
+            const btnBakery = document.getElementById('btn-bakery');
+            if(btnBakery) btnBakery.style.display = 'none'; 
+        }
+        if (this.state.enclosures.dairy) { 
+            this.createDairy(15, -25); 
+            const btnDairy = document.getElementById('btn-dairy');
+            if(btnDairy) btnDairy.style.display = 'none'; 
+        }
 
         this.renderGrid(); 
         
@@ -907,6 +929,7 @@ class NebulaFarmPro {
 
         const now = Date.now();
 
+        // OBRAS (Tapumes pulando)
         for (let i = this.constructions.length - 1; i >= 0; i--) {
             const c = this.constructions[i];
             if (now - c.timer > c.duration) {
@@ -917,6 +940,7 @@ class NebulaFarmPro {
             }
         }
 
+        // FÁBRICAS (Fogo e Produto)
         this.factories.forEach(f => {
             if (f.state === 'baking') {
                 if (now - f.timer > f.duration) {
@@ -938,6 +962,7 @@ class NebulaFarmPro {
             }
         });
 
+        // CRESCIMENTO DAS PLANTAS
         this.plants.forEach(p => {
             if (p.progress < 1) {
                 const conf = this.config[p.type];
