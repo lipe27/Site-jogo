@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - BLINDAGEM MÁXIMA E NUVEM
- * Com Radar de Erros na Tela e Proteção contra Cache!
+ * NEBULA FARM PRO - PET FIX & CLOUD SAVE
+ * O motor agora tem todas as funções corretas e os pets voltaram!
  */
 
 // RADAR DE ERROS: Vai mostrar na tela se algo quebrar!
@@ -64,7 +64,7 @@ class NebulaFarmPro {
         this.placementIsValid = false;
 
         this.isFishing = false;
-        this.timeOfDay = 1.5; // Começa de Dia (Meio-dia) pra não dar tela escura!
+        this.timeOfDay = 1.5; 
         
         this.farmName = null;
 
@@ -122,7 +122,7 @@ class NebulaFarmPro {
                     this.initCloud();
                 });
             } else {
-                this.startGame(); // Failsafe se o HTML for antigo
+                this.startGame(); 
             }
         } else {
             this.initCloud();
@@ -216,7 +216,10 @@ class NebulaFarmPro {
 
         this.renderGrid(); 
         for(let i=0; i<45; i++) this.createTree((Math.random()-0.5)*250, (Math.random()-0.5)*250);
-        this.createPet('dog', 15, -5); this.createPet('cat', 18, -12);
+        
+        // OS ANIMAIS VOLTARAM!
+        this.createPet('dog', 15, -5); 
+        this.createPet('cat', 18, -12);
         for(let i=0; i<5; i++) this.createBird(); 
     }
 
@@ -402,7 +405,50 @@ class NebulaFarmPro {
         tree.add(trunk, leaves); tree.position.set(x, 0, z); this.scene.add(tree);
     }
 
-    createPet() {} createBird() {} 
+    // ==========================================
+    // AS FUNÇÕES DOS PETS QUE FALTARAM!
+    // ==========================================
+    createPet(type, startX, startZ) {
+        const pet = new THREE.Group(); let speed = 0.06;
+        if (type === 'dog') {
+            const fur = new THREE.MeshStandardMaterial({ color: 0xd35400 }); 
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 2), fur); body.position.y = 0.7;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), fur); head.position.set(0, 1.2, 1.2);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.4), fur); snout.position.set(0, 1.1, 1.8);
+            pet.add(body, head, snout);
+        } else if (type === 'cat') {
+            const fur = new THREE.MeshStandardMaterial({ color: 0x7f8c8d }); 
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), fur); body.position.y = 0.5;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), fur); head.position.set(0, 0.9, 1);
+            const ear1 = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 4), fur); ear1.position.set(0.25, 1.4, 1);
+            const ear2 = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 4), fur); ear2.position.set(-0.25, 1.4, 1);
+            pet.add(body, head, ear1, ear2); speed = 0.07; 
+        }
+        pet.position.set(startX, 0, startZ); pet.castShadow = true; this.scene.add(pet);
+        this.pets.push({ mesh: pet, type: type, speed: speed, target: new THREE.Vector3(startX, 0, startZ), state: 'idle', timer: Math.random() * 100 });
+    }
+
+    createBird() {
+        const bird = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x2980b9}));
+        const wings = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.3), new THREE.MeshStandardMaterial({color: 0x3498db}));
+        bird.add(body, wings); const pivot = new THREE.Group();
+        pivot.position.set((Math.random()-0.5)*100, 15 + Math.random()*5, (Math.random()-0.5)*100);
+        bird.position.set(10 + Math.random()*5, 0, 0); pivot.add(bird); this.scene.add(pivot);
+        const speed = 0.02 + Math.random()*0.02;
+        this.animations.push(() => { pivot.rotation.y += speed; bird.position.y = Math.sin(Date.now() * 0.005 * speed * 100) * 2; });
+    }
+
+    updatePets() {
+        this.pets.forEach(pet => {
+            if (pet.state === 'idle') { pet.timer--; if (pet.timer <= 0) { pet.state = 'walking'; pet.target.set((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60); } } 
+            else if (pet.state === 'walking') {
+                const dx = pet.target.x - pet.mesh.position.x; const dz = pet.target.z - pet.mesh.position.z; const dist = Math.sqrt(dx*dx + dz*dz);
+                if (dist < 0.5) { pet.state = 'idle'; pet.timer = 100 + Math.random() * 300; } 
+                else { pet.mesh.position.x += (dx / dist) * pet.speed; pet.mesh.position.z += (dz / dist) * pet.speed; pet.mesh.rotation.y = Math.atan2(dx, dz); pet.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 0.2; }
+            }
+        });
+    }
     
     renderGrid() {
         this.tiles.forEach(t => this.scene.remove(t)); this.tiles = []; const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 }); const offset = (this.state.gridSize * 3.5) / 2 - 1.75; 
@@ -430,7 +476,10 @@ class NebulaFarmPro {
             const bubble = document.getElementById('bubble-menu');
             if (bubble && bubble.style.display === 'flex') this.hideBubble();
 
-            this.isPanning = true; this.panStart = { x: e.clientX, y: e.clientY }; this.hasPanned = false; this.pendingBubble = null;
+            this.isPanning = true;
+            this.panStart = { x: e.clientX, y: e.clientY };
+            this.hasPanned = false;
+            this.pendingBubble = null;
 
             const factoryMeshes = []; this.factories.forEach(f => factoryMeshes.push(...f.mesh.children));
             const hitsF = raycaster.intersectObjects(factoryMeshes);
@@ -442,7 +491,9 @@ class NebulaFarmPro {
             }
 
             const plantMeshes = this.plants.filter(p => p.progress >= 1).flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
-            if (raycaster.intersectObjects(plantMeshes).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant' }; return; }
+            if (raycaster.intersectObjects(plantMeshes).length > 0) { 
+                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant' }; return; 
+            }
 
             const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
             const hitsA = raycaster.intersectObjects(animalMeshes);
@@ -453,26 +504,48 @@ class NebulaFarmPro {
                 return;
             }
 
-            if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return; }
+            if (this.lake && raycaster.intersectObject(this.lake).length > 0) {
+                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return;
+            }
+
             const hitsTiles = raycaster.intersectObjects(this.tiles);
-            if (hitsTiles.length > 0 && !hitsTiles[0].object.userData.occupied) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop' }; return; }
+            if (hitsTiles.length > 0 && !hitsTiles[0].object.userData.occupied) {
+                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop' }; return;
+            }
+
             const hitsGrass = raycaster.intersectObject(this.grass);
-            if (hitsGrass.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree' }; return; }
+            if (hitsGrass.length > 0) {
+                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree' }; return;
+            }
         });
 
         window.addEventListener('pointermove', (e) => {
             if (this.placementMode) return; 
+            
             if (this.isDragging && this.activeDragTool) {
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-                raycaster.setFromCamera(mouse, this.camera); this.applyDragTool(raycaster, e.clientX, e.clientY);
-            } else if (this.isPanning) {
-                const moveX = e.clientX - this.panStart.x; const moveY = e.clientY - this.panStart.y;
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, this.camera);
+                this.applyDragTool(raycaster, e.clientX, e.clientY);
+            } 
+            else if (this.isPanning) {
+                const moveX = e.clientX - this.panStart.x;
+                const moveY = e.clientY - this.panStart.y;
+                
                 if (Math.abs(moveX) > 4 || Math.abs(moveY) > 4) {
-                    this.hasPanned = true; this.pendingBubble = null; const f = 0.08; 
+                    this.hasPanned = true;
+                    this.pendingBubble = null; 
+                    const f = 0.08; 
+                    
                     let newX = this.camera.position.x - (moveX * f) - (moveY * f);
                     let newZ = this.camera.position.z + (moveX * f) - (moveY * f);
-                    newX = Math.max(-40, Math.min(110, newX)); newZ = Math.max(-40, Math.min(110, newZ));
-                    this.camera.position.x = newX; this.camera.position.z = newZ;
+                    
+                    newX = Math.max(-40, Math.min(110, newX));
+                    newZ = Math.max(-40, Math.min(110, newZ));
+                    
+                    this.camera.position.x = newX;
+                    this.camera.position.z = newZ;
+                    
                     this.panStart = { x: e.clientX, y: e.clientY };
                 }
             }
@@ -481,15 +554,24 @@ class NebulaFarmPro {
         window.addEventListener('pointerup', () => {
             if (this.placementMode) return;
             this.isPanning = false;
-            if (this.activeDragTool) { this.isDragging = false; this.activeDragTool = null; this.hideBubble(); } 
-            else if (!this.hasPanned && this.pendingBubble) { this.showBubble(this.pendingBubble.x, this.pendingBubble.y, this.pendingBubble.ctx); }
+            if (this.activeDragTool) {
+                this.isDragging = false;
+                this.activeDragTool = null;
+                this.hideBubble();
+            } 
+            else if (!this.hasPanned && this.pendingBubble) {
+                this.showBubble(this.pendingBubble.x, this.pendingBubble.y, this.pendingBubble.ctx);
+            }
         });
     }
 
     showBubble(x, y, context) {
         const bubble = document.getElementById('bubble-menu');
         if(!bubble) return;
-        bubble.style.left = x + 'px'; bubble.style.top = y + 'px'; bubble.style.display = 'flex'; bubble.innerHTML = '';
+        bubble.style.left = x + 'px';
+        bubble.style.top = y + 'px';
+        bubble.style.display = 'flex';
+        bubble.innerHTML = '';
 
         if (context === 'plant_crop') {
             if(this.state.unlocked.wheat) bubble.innerHTML += this.createBubbleItem('wheat', '🌾', this.state.inventory.wheat);
@@ -519,7 +601,10 @@ class NebulaFarmPro {
         document.querySelectorAll('.bubble-item').forEach(item => {
             if (!item.classList.contains('locked')) {
                 item.addEventListener('pointerdown', (e) => {
-                    e.preventDefault(); this.activeDragTool = e.currentTarget.dataset.tool; this.isDragging = true; e.stopPropagation(); 
+                    e.preventDefault(); 
+                    this.activeDragTool = e.currentTarget.dataset.tool;
+                    this.isDragging = true;
+                    e.stopPropagation(); 
                 });
             }
         });
@@ -530,7 +615,10 @@ class NebulaFarmPro {
         return `<div class="bubble-item ${lockedClass}" data-tool="${tool}">${icon}<small>${textOverride}</small></div>`;
     }
 
-    hideBubble() { const b = document.getElementById('bubble-menu'); if(b) b.style.display = 'none'; }
+    hideBubble() { 
+        const b = document.getElementById('bubble-menu');
+        if(b) b.style.display = 'none'; 
+    }
 
     applyDragTool(raycaster, x, y) {
         if (this.activeDragTool === 'bake_bread' || this.activeDragTool === 'make_cheese') {
@@ -605,6 +693,7 @@ class NebulaFarmPro {
         if (this.isFishing) return; 
         if (this.state.inventory.corn <= 0) { this.spawnFX(x, y, "PRECISA DE 1 MILHO (ISCA)", "#F44336"); return; }
         if (this.state.siloCount >= this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
+
         this.state.inventory.corn--; this.isFishing = true; this.spawnFX(x, y, "PESCANDO...", "#3498db"); this.updateUI();
         setTimeout(() => {
             this.isFishing = false; const chance = Math.random();
@@ -727,7 +816,6 @@ class NebulaFarmPro {
         el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
-    // UPDATE UI SEGURO - NUNCA MAIS VAI CRASHAR
     updateUI() {
         const setTxt = (id, text) => {
             try {
@@ -784,6 +872,8 @@ class NebulaFarmPro {
         requestAnimationFrame((t) => this.animate(t));
         if (typeof TWEEN !== 'undefined' && time) TWEEN.update(time);
         this.animations.forEach(fn => fn()); 
+        
+        // As funções dos animais voltaram com segurança!
         this.updateAnimals();
         this.updatePets();
 
