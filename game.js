@@ -1,7 +1,21 @@
 /**
- * NEBULA FARM PRO - ULTIMATE ARCHITECT UPDATE
- * O Retorno do Moinho + Correção do Eixo + Construção com Grade!
+ * NEBULA FARM PRO - CLOUD SAVE UPDATE ☁️
+ * Integração com Firebase: Salva o inventário, nível, dinheiro e fazendas na nuvem!
  */
+
+// 1. LIGANDO O MOTOR NA NUVEM DO FELIPÃO
+const firebaseConfig = {
+    apiKey: "AIzaSyCCnMspqNoKarOxZxXzaWACNxIV-mi3qNQ",
+    authDomain: "nebulafarm-db.firebaseapp.com",
+    projectId: "nebulafarm-db",
+    storageBucket: "nebulafarm-db.firebasestorage.app",
+    messagingSenderId: "642094890680",
+    appId: "1:642094890680:web:33e78b20729f19be8cbe4d"
+};
+
+// Inicializa a Nuvem
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 class NebulaFarmPro {
     constructor() {
@@ -17,22 +31,18 @@ class NebulaFarmPro {
         this.pets = [];       
         this.factories = []; 
         
-        // ARRAYS DO MODO ARQUITETO
         this.constructions = []; 
         this.obstacles = [];     
         
-        // INTERAÇÕES
         this.isDragging = false; 
         this.activeDragTool = null; 
         this.lastTreePlantTime = 0; 
         
-        // CÂMERA PAN (Arrastar Mapa)
         this.isPanning = false;      
         this.panStart = { x: 0, y: 0 };
         this.hasPanned = false;      
         this.pendingBubble = null;   
         
-        // MODO CONSTRUÇÃO
         this.placementMode = false;
         this.placementType = null;
         this.placementCost = 0;
@@ -43,8 +53,12 @@ class NebulaFarmPro {
         this.isFishing = false;
         this.timeOfDay = 0;
         
+        // Pega o nome da Fazenda salvo no celular/PC, ou deixa em branco pra perguntar
+        this.farmName = localStorage.getItem('nebulafarm_savename') || null;
+
+        // O Estado Inicial (Se não tiver nuvem, ele começa assim)
         this.state = {
-            money: 1000, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
+            money: 50, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
             inventory: { wheat: 10, carrot: 10, corn: 0, apple: 0, orange: 0, egg: 0, milk: 0, bacon: 0, feed: 5, fish: 0, bread: 0, cheese: 0 },
             unlocked: { wheat: true, carrot: true, corn: false, apple: false, orange: false },
             enclosures: { coop: false, pigpen: false, corral: false, mill: false, bakery: false, dairy: false },
@@ -71,30 +85,81 @@ class NebulaFarmPro {
             pig:     { product: 'bacon', time: 90000 }  
         };
 
-        this.init();
+        // Começa a rotina de carregar dados da nuvem
+        this.initCloud();
     }
 
-    init() {
+    // 2. CONEXÃO COM O BANCO DE DADOS
+    initCloud() {
         try {
-            this.setupCore();
-            this.setupLights();
-            this.buildWorld();
-            this.setupInteractions();
-            this.generateMission(); 
-            this.updateUI();
-            
-            const loader = document.getElementById('loader');
-            if(loader) {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.remove(), 500);
+            // Se o cara entrou pela primeira vez no site, pergunta o nome da fazenda!
+            if (!this.farmName) {
+                let input = prompt("🌟 BEM-VINDO! Qual será o nome da sua Fazenda? (Sem espaços)");
+                if (!input || input.trim() === "") input = "FazendaFelipao";
+                this.farmName = input.replace(/\s+/g, ''); // Tira espaços pra não dar erro no banco
+                localStorage.setItem('nebulafarm_savename', this.farmName);
             }
-            
-            requestAnimationFrame((time) => this.animate(time));
-            
+
+            const loaderText = document.getElementById('loading-text');
+            if (loaderText) loaderText.innerText = `BUSCANDO: ${this.farmName.toUpperCase()}...`;
+
+            // Puxa os dados lá do Firebase
+            db.collection("fazendas").doc(this.farmName).get().then((doc) => {
+                if (doc.exists) {
+                    console.log("Nuvem Encontrada! Carregando dados...");
+                    // Junta os dados da nuvem com o jogo
+                    this.state = { ...this.state, ...doc.data() };
+                } else {
+                    console.log("Fazenda Nova! Criando save na nuvem...");
+                    this.saveToCloud(true); // Salva o state inicial lá
+                }
+                // Tendo dado certo ou não, constrói o jogo!
+                this.startGame();
+            }).catch((erro) => {
+                console.error("Erro no Banco de Dados:", erro);
+                alert("Sem conexão com a nuvem! Jogando no modo Offline.");
+                this.startGame(); // Inicia offline se der BO na internet
+            });
+
         } catch (e) {
-            console.error("ERRO GRAVE:", e);
-            alert("🚨 PANE NO MOTOR DO JOGO!\nErro: " + e.message);
+            console.error("Erro na Inicialização:", e);
+            this.startGame();
         }
+    }
+
+    // 3. SALVAR JOGO NA NUVEM
+    saveToCloud(isAutoSave = false) {
+        db.collection("fazendas").doc(this.farmName).set(this.state)
+            .then(() => {
+                // Só mostra o balãozinho verde se for o salvamento manual pelo botão
+                if (!isAutoSave) {
+                    this.spawnFX(window.innerWidth / 2, 80, "💾 JOGO SALVO!", "#4CAF50");
+                } else {
+                    console.log("Auto-save na nuvem concluído.");
+                }
+            })
+            .catch((error) => console.error("Erro ao salvar:", error));
+    }
+
+    // O INÍCIO REAL DO JOGO (Depois de ler a Nuvem)
+    startGame() {
+        this.setupCore();
+        this.setupLights();
+        this.buildWorld();
+        this.setupInteractions();
+        if(!this.state.currentMission) this.generateMission(); 
+        this.updateUI();
+        
+        const loader = document.getElementById('loader');
+        if(loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+        }
+        
+        // AUTO-SAVE: Salva na nuvem silenciosamente a cada 30 segundos!
+        setInterval(() => { this.saveToCloud(true); }, 30000);
+
+        requestAnimationFrame((time) => this.animate(time));
     }
 
     setupCore() {
@@ -134,19 +199,20 @@ class NebulaFarmPro {
         this.grass.receiveShadow = true; 
         this.scene.add(this.grass);
         
-        // Áreas que você NÃO pode construir em cima!
-        this.obstacles.push({ x: -22, z: -15, r: 8 }); // Celeiro
-        this.obstacles.push({ x: 22, z: -10, r: 8 });  // Casa
-        this.obstacles.push({ x: 35, z: 25, r: 14 });  // Lago
-        this.obstacles.push({ x: 0, z: 0, r: 12 });    // Terra Arada
-        this.obstacles.push({ x: -22, z: 10, r: 6 });  // O MOINHO VOLTOU PARA OS OBSTÁCULOS!
+        this.obstacles.push({ x: -22, z: -15, r: 8 }); 
+        this.obstacles.push({ x: 22, z: -10, r: 8 });  
+        this.obstacles.push({ x: 35, z: 25, r: 14 });  
+        this.obstacles.push({ x: 0, z: 0, r: 12 });    
+        this.obstacles.push({ x: -22, z: 10, r: 6 });  
         
         this.createBarn(-22, -15); 
         this.createFarmhouse(22, -10); 
         this.createLake(35, 25);
-        
-        // CHAMANDO O MOINHO DE VOLTA PRO JOGO!
         this.createWindmill(-22, 10); 
+
+        // Se a pessoa já comprou nas partidas passadas (leu da nuvem), já constrói direto!
+        if (this.state.enclosures.bakery) { this.createBakery(5, -25); document.getElementById('btn-bakery').style.display = 'none'; }
+        if (this.state.enclosures.dairy) { this.createDairy(15, -25); document.getElementById('btn-dairy').style.display = 'none'; }
 
         this.renderGrid(); 
         
@@ -177,19 +243,16 @@ class NebulaFarmPro {
         const ui = document.getElementById('placement-ui');
         if(ui) ui.classList.remove('hidden');
 
-        // Cria a grade do chão
         this.placementGrid = new THREE.GridHelper(200, 50, 0x000000, 0xffffff);
         this.placementGrid.position.y = 0.2;
         this.placementGrid.material.opacity = 0.2;
         this.placementGrid.material.transparent = true;
         this.scene.add(this.placementGrid);
 
-        // Bloco Fantasma (2x2 na nossa escala é 8x8)
         const geo = new THREE.BoxGeometry(8, 4, 8);
         const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 });
         this.placementGhost = new THREE.Mesh(geo, mat);
         
-        // Põe o fantasma na frente da câmera
         this.placementGhost.position.set(this.camera.position.x - 50, 2, this.camera.position.z - 50);
         this.scene.add(this.placementGhost);
         
@@ -218,14 +281,16 @@ class NebulaFarmPro {
         this.cancelPlacement(); 
         this.updateUI();
 
-        // Demora 10 segundos pra obra ficar pronta
-        this.createConstructionSite(this.placementType, px, pz, 10000);
+        // Demora 5 segundos pra obra ficar pronta pra agilizar o seu teste
+        this.createConstructionSite(this.placementType, px, pz, 5000);
+        
+        // Força salvar a compra no banco de dados na hora
+        this.saveToCloud();
     }
 
     validatePlacementPosition(x, z) {
         if (!this.placementGhost) return;
         
-        // Faz o bloco pular de 4 em 4 unidades
         const snapX = Math.round(x / 4) * 4;
         const snapZ = Math.round(z / 4) * 4;
         
@@ -283,7 +348,6 @@ class NebulaFarmPro {
     // FÁBRICAS, MOINHO E CONSTRUÇÕES
     // ==========================================
     
-    // O MOINHO VOLTOU!
     createWindmill(x, z) {
         const windmill = new THREE.Group();
         const tower = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 15, 8), new THREE.MeshStandardMaterial({color: 0x8d6e63})); tower.position.y = 7.5; tower.castShadow = true;
@@ -846,9 +910,6 @@ class NebulaFarmPro {
         el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
-    // ==========================================
-    // INTERFACE BLINDADA - O SEGREDO PRA NÃO CRASHAR
-    // ==========================================
     updateUI() {
         const setTxt = (id, text) => {
             const el = document.getElementById(id);
@@ -982,4 +1043,5 @@ class NebulaFarmPro {
     }
 }
 
+// INICIA O JOGO SOMENTE QUANDO O HTML ESTIVER PRONTO
 window.addEventListener('DOMContentLoaded', () => { window.gameInstance = new NebulaFarmPro(); });
