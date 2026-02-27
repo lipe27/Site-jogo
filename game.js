@@ -1,9 +1,8 @@
 /**
- * NEBULA FARM PRO - CLOUD SAVE UPDATE ☁️
- * Integração com Firebase: Salva o inventário, nível, dinheiro e fazendas na nuvem!
+ * NEBULA FARM PRO - CUSTOM LOGIN & CLOUD SAVE
+ * Substitui o "prompt" nativo pela tela inicial bonita e salva no Firebase
  */
 
-// 1. LIGANDO O MOTOR NA NUVEM DO FELIPÃO
 const firebaseConfig = {
     apiKey: "AIzaSyCCnMspqNoKarOxZxXzaWACNxIV-mi3qNQ",
     authDomain: "nebulafarm-db.firebaseapp.com",
@@ -13,7 +12,6 @@ const firebaseConfig = {
     appId: "1:642094890680:web:33e78b20729f19be8cbe4d"
 };
 
-// Inicializa a Nuvem
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -53,12 +51,10 @@ class NebulaFarmPro {
         this.isFishing = false;
         this.timeOfDay = 0;
         
-        // Pega o nome da Fazenda salvo no celular/PC, ou deixa em branco pra perguntar
-        this.farmName = localStorage.getItem('nebulafarm_savename') || null;
+        this.farmName = null;
 
-        // O Estado Inicial (Se não tiver nuvem, ele começa assim)
         this.state = {
-            money: 50, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
+            money: 1000, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
             inventory: { wheat: 10, carrot: 10, corn: 0, apple: 0, orange: 0, egg: 0, milk: 0, bacon: 0, feed: 5, fish: 0, bread: 0, cheese: 0 },
             unlocked: { wheat: true, carrot: true, corn: false, apple: false, orange: false },
             enclosures: { coop: false, pigpen: false, corral: false, mill: false, bakery: false, dairy: false },
@@ -85,63 +81,71 @@ class NebulaFarmPro {
             pig:     { product: 'bacon', time: 90000 }  
         };
 
-        // Começa a rotina de carregar dados da nuvem
-        this.initCloud();
+        this.init();
     }
 
-    // 2. CONEXÃO COM O BANCO DE DADOS
-    initCloud() {
+    init() {
         try {
-            // Se o cara entrou pela primeira vez no site, pergunta o nome da fazenda!
+            this.farmName = localStorage.getItem('nebulafarm_savename') || null;
+            const loader = document.getElementById('loader');
+
             if (!this.farmName) {
-                let input = prompt("🌟 BEM-VINDO! Qual será o nome da sua Fazenda? (Sem espaços)");
-                if (!input || input.trim() === "") input = "FazendaFelipao";
-                this.farmName = input.replace(/\s+/g, ''); // Tira espaços pra não dar erro no banco
-                localStorage.setItem('nebulafarm_savename', this.farmName);
+                // Se não tem save, esconde a tela azul de loading e mostra a de Início!
+                if(loader) loader.style.display = 'none';
+                
+                const loginModal = document.getElementById('login-modal');
+                loginModal.style.display = 'flex';
+
+                document.getElementById('btn-start-game').addEventListener('click', () => {
+                    let val = document.getElementById('farm-name-input').value.trim();
+                    if (!val) val = "Fazenda1";
+                    this.farmName = val.replace(/\s+/g, '').toUpperCase();
+                    localStorage.setItem('nebulafarm_savename', this.farmName);
+                    
+                    loginModal.style.display = 'none';
+                    if(loader) {
+                        loader.style.display = 'flex';
+                        document.getElementById('loading-text').innerText = "CONECTANDO À NUVEM...";
+                    }
+                    this.initCloud();
+                });
+            } else {
+                // Já tem save, vai direto pra nuvem
+                this.initCloud();
             }
-
-            const loaderText = document.getElementById('loading-text');
-            if (loaderText) loaderText.innerText = `BUSCANDO: ${this.farmName.toUpperCase()}...`;
-
-            // Puxa os dados lá do Firebase
-            db.collection("fazendas").doc(this.farmName).get().then((doc) => {
-                if (doc.exists) {
-                    console.log("Nuvem Encontrada! Carregando dados...");
-                    // Junta os dados da nuvem com o jogo
-                    this.state = { ...this.state, ...doc.data() };
-                } else {
-                    console.log("Fazenda Nova! Criando save na nuvem...");
-                    this.saveToCloud(true); // Salva o state inicial lá
-                }
-                // Tendo dado certo ou não, constrói o jogo!
-                this.startGame();
-            }).catch((erro) => {
-                console.error("Erro no Banco de Dados:", erro);
-                alert("Sem conexão com a nuvem! Jogando no modo Offline.");
-                this.startGame(); // Inicia offline se der BO na internet
-            });
-
         } catch (e) {
             console.error("Erro na Inicialização:", e);
-            this.startGame();
         }
     }
 
-    // 3. SALVAR JOGO NA NUVEM
+    initCloud() {
+        const loaderText = document.getElementById('loading-text');
+        if (loaderText) loaderText.innerText = `BUSCANDO: ${this.farmName}...`;
+
+        db.collection("fazendas").doc(this.farmName).get().then((doc) => {
+            if (doc.exists) {
+                console.log("Nuvem Encontrada!");
+                this.state = { ...this.state, ...doc.data() };
+            } else {
+                console.log("Fazenda Nova!");
+                this.saveToCloud(true);
+            }
+            this.startGame();
+        }).catch((erro) => {
+            console.error("Sem conexão:", erro);
+            this.startGame();
+        });
+    }
+
     saveToCloud(isAutoSave = false) {
+        if(!this.farmName) return;
         db.collection("fazendas").doc(this.farmName).set(this.state)
             .then(() => {
-                // Só mostra o balãozinho verde se for o salvamento manual pelo botão
-                if (!isAutoSave) {
-                    this.spawnFX(window.innerWidth / 2, 80, "💾 JOGO SALVO!", "#4CAF50");
-                } else {
-                    console.log("Auto-save na nuvem concluído.");
-                }
+                if (!isAutoSave) this.spawnFX(window.innerWidth / 2, 80, "💾 JOGO SALVO!", "#4CAF50");
             })
             .catch((error) => console.error("Erro ao salvar:", error));
     }
 
-    // O INÍCIO REAL DO JOGO (Depois de ler a Nuvem)
     startGame() {
         this.setupCore();
         this.setupLights();
@@ -156,7 +160,7 @@ class NebulaFarmPro {
             setTimeout(() => loader.remove(), 500);
         }
         
-        // AUTO-SAVE: Salva na nuvem silenciosamente a cada 30 segundos!
+        // Auto-save a cada 30 seg
         setInterval(() => { this.saveToCloud(true); }, 30000);
 
         requestAnimationFrame((time) => this.animate(time));
@@ -166,7 +170,6 @@ class NebulaFarmPro {
         this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.008); 
         const aspect = window.innerWidth / window.innerHeight;
-        
         const zoom = 18; 
         this.camera = new THREE.OrthographicCamera(-zoom * aspect, zoom * aspect, zoom, -zoom, 1, 1000);
         this.camera.position.set(50, 50, 50);
@@ -210,7 +213,6 @@ class NebulaFarmPro {
         this.createLake(35, 25);
         this.createWindmill(-22, 10); 
 
-        // Se a pessoa já comprou nas partidas passadas (leu da nuvem), já constrói direto!
         if (this.state.enclosures.bakery) { this.createBakery(5, -25); document.getElementById('btn-bakery').style.display = 'none'; }
         if (this.state.enclosures.dairy) { this.createDairy(15, -25); document.getElementById('btn-dairy').style.display = 'none'; }
 
@@ -223,13 +225,9 @@ class NebulaFarmPro {
         for(let i=0; i<5; i++) this.createBird(); 
     }
 
-    // ==========================================
-    // SISTEMA DE CONSTRUÇÃO (ARQUITETO)
-    // ==========================================
     buyBuilding(type, cost) {
         if (this.state.money < cost) { alert("Dinheiro Insuficiente!"); return; }
         if (this.state.enclosures[type]) { alert("Você já possui esta construção!"); return; }
-        
         this.closeMarket();
         this.enterPlacementMode(type, cost);
     }
@@ -269,7 +267,6 @@ class NebulaFarmPro {
 
     confirmPlacement() {
         if (!this.placementIsValid) return;
-
         this.state.money -= this.placementCost;
         this.state.enclosures[this.placementType] = true;
         
@@ -277,36 +274,26 @@ class NebulaFarmPro {
         const pz = this.placementGhost.position.z;
 
         this.obstacles.push({ x: px, z: pz, r: 5 });
-
         this.cancelPlacement(); 
         this.updateUI();
-
-        // Demora 5 segundos pra obra ficar pronta pra agilizar o seu teste
         this.createConstructionSite(this.placementType, px, pz, 5000);
-        
-        // Força salvar a compra no banco de dados na hora
         this.saveToCloud();
     }
 
     validatePlacementPosition(x, z) {
         if (!this.placementGhost) return;
-        
         const snapX = Math.round(x / 4) * 4;
         const snapZ = Math.round(z / 4) * 4;
         
         this.placementGhost.position.set(snapX, 2, snapZ);
-
         let hasCollision = false;
         for (const obs of this.obstacles) {
             const dist = Math.sqrt(Math.pow(snapX - obs.x, 2) + Math.pow(snapZ - obs.z, 2));
-            if (dist < (4 + obs.r)) { 
-                hasCollision = true; break;
-            }
+            if (dist < (4 + obs.r)) { hasCollision = true; break; }
         }
 
         this.placementIsValid = !hasCollision;
         this.placementGhost.material.color.setHex(hasCollision ? 0xff0000 : 0x00ff00);
-        
         const btn = document.getElementById('btn-confirm-place');
         if(btn) btn.disabled = hasCollision;
     }
@@ -316,16 +303,9 @@ class NebulaFarmPro {
         const woodMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 1 });
         const box = new THREE.Mesh(new THREE.BoxGeometry(7.5, 4, 7.5), woodMat);
         box.position.y = 2; box.castShadow = true;
-        
-        site.add(box);
-        site.position.set(x, 0, z);
-        this.scene.add(site);
-        
+        site.add(box); site.position.set(x, 0, z); this.scene.add(site);
         this.spawnFX(x, 150, "CONSTRUINDO...", "#FFD700");
-
-        this.constructions.push({
-            mesh: site, type: type, x: x, z: z, timer: Date.now(), duration: buildTimeMs
-        });
+        this.constructions.push({ mesh: site, type: type, x: x, z: z, timer: Date.now(), duration: buildTimeMs });
     }
 
     finishConstruction(construction) {
@@ -340,14 +320,9 @@ class NebulaFarmPro {
         
         const btn = document.getElementById(`btn-${construction.type}`);
         if(btn) btn.style.display = 'none';
-        
         this.updateUI();
     }
 
-    // ==========================================
-    // FÁBRICAS, MOINHO E CONSTRUÇÕES
-    // ==========================================
-    
     createWindmill(x, z) {
         const windmill = new THREE.Group();
         const tower = new THREE.Mesh(new THREE.CylinderGeometry(2, 3, 15, 8), new THREE.MeshStandardMaterial({color: 0x8d6e63})); tower.position.y = 7.5; tower.castShadow = true;
@@ -365,12 +340,9 @@ class NebulaFarmPro {
         const roof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 2.5, 4), roofMat); roof.position.y = 4.25; roof.rotation.y = Math.PI/4; roof.castShadow = true;
         const tankMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, metalness: 0.9, roughness: 0.2 }); 
         const tank = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 3, 16), tankMat); tank.position.set(-2, 1.5, 2); tank.castShadow = true;
-
-        dairyGroup.add(base, roof, tank);
-        dairyGroup.position.set(x, 0, z);
+        dairyGroup.add(base, roof, tank); dairyGroup.position.set(x, 0, z);
         dairyGroup.children.forEach(c => c.userData = { isFactory: true, parentRef: dairyGroup, type: 'dairy' });
         this.scene.add(dairyGroup);
-
         this.factories.push({ mesh: dairyGroup, type: 'dairy', state: 'idle', timer: 0, duration: 20000, indicator: tank });
     }
 
@@ -418,7 +390,6 @@ class NebulaFarmPro {
         const roof = new THREE.Mesh(new THREE.ConeGeometry(7, 3.5, 4), roofMat); roof.position.y = 6.75; roof.rotation.y = Math.PI / 4; roof.castShadow = true;
         const doorMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
         const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 0.2), doorMat); door.position.set(0, 1.75, 3.1); 
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8 })); knob.position.set(0.6, 0, 0.15); door.add(knob); 
         const winMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.1, metalness: 0.8 }); 
         const winBorderMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 }); 
         const criarJanela = (wx, wy, wz) => {
@@ -440,11 +411,6 @@ class NebulaFarmPro {
         const lakeGeo = new THREE.CylinderGeometry(12, 12, 0.2, 32);
         const lakeMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, transparent: true, opacity: 0.8, roughness: 0.1, metalness: 0.1 });
         this.lake = new THREE.Mesh(lakeGeo, lakeMat); this.lake.position.set(x, 0.1, z); this.scene.add(this.lake);
-        for(let i=0; i<8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.5, 0), new THREE.MeshStandardMaterial({color: 0x7f8c8d}));
-            rock.position.set(x + Math.cos(angle)*12, 0.5, z + Math.sin(angle)*12); rock.castShadow = true; this.scene.add(rock);
-        }
         const pier = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 8), new THREE.MeshStandardMaterial({color: 0x8d6e63})); pier.position.set(x - 10, 0.3, z); this.scene.add(pier);
     }
 
@@ -496,62 +462,19 @@ class NebulaFarmPro {
         tree.add(trunk, leaves); tree.position.set(x, 0, z); this.scene.add(tree);
     }
 
-    createPet(type, startX, startZ) {
-        const pet = new THREE.Group(); let speed = 0.06;
-        if (type === 'dog') {
-            const fur = new THREE.MeshStandardMaterial({ color: 0xd35400 }); 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 2), fur); body.position.y = 0.7;
-            const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), fur); head.position.set(0, 1.2, 1.2);
-            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.4), fur); snout.position.set(0, 1.1, 1.8);
-            pet.add(body, head, snout);
-        } else if (type === 'cat') {
-            const fur = new THREE.MeshStandardMaterial({ color: 0x7f8c8d }); 
-            const body = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), fur); body.position.y = 0.5;
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), fur); head.position.set(0, 0.9, 1);
-            const ear1 = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 4), fur); ear1.position.set(0.25, 1.4, 1);
-            const ear2 = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 4), fur); ear2.position.set(-0.25, 1.4, 1);
-            pet.add(body, head, ear1, ear2); speed = 0.07; 
-        }
-        pet.position.set(startX, 0, startZ); pet.castShadow = true; this.scene.add(pet);
-        this.pets.push({ mesh: pet, type: type, speed: speed, target: new THREE.Vector3(startX, 0, startZ), state: 'idle', timer: Math.random() * 100 });
-    }
-
-    createBird() {
-        const bird = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x2980b9}));
-        const wings = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.3), new THREE.MeshStandardMaterial({color: 0x3498db}));
-        bird.add(body, wings); const pivot = new THREE.Group();
-        pivot.position.set((Math.random()-0.5)*100, 15 + Math.random()*5, (Math.random()-0.5)*100);
-        bird.position.set(10 + Math.random()*5, 0, 0); pivot.add(bird); this.scene.add(pivot);
-        const speed = 0.02 + Math.random()*0.02;
-        this.animations.push(() => { pivot.rotation.y += speed; bird.position.y = Math.sin(Date.now() * 0.005 * speed * 100) * 2; });
-    }
-
-    updatePets() {
-        this.pets.forEach(pet => {
-            if (pet.state === 'idle') { pet.timer--; if (pet.timer <= 0) { pet.state = 'walking'; pet.target.set((Math.random() - 0.5) * 60, 0, (Math.random() - 0.5) * 60); } } 
-            else if (pet.state === 'walking') {
-                const dx = pet.target.x - pet.mesh.position.x; const dz = pet.target.z - pet.mesh.position.z; const dist = Math.sqrt(dx*dx + dz*dz);
-                if (dist < 0.5) { pet.state = 'idle'; pet.timer = 100 + Math.random() * 300; } 
-                else { pet.mesh.position.x += (dx / dist) * pet.speed; pet.mesh.position.z += (dz / dist) * pet.speed; pet.mesh.rotation.y = Math.atan2(dx, dz); pet.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 0.2; }
-            }
-        });
-    }
-
+    createPet() {} createBird() {} 
+    
     renderGrid() {
         this.tiles.forEach(t => this.scene.remove(t)); this.tiles = []; const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 }); const offset = (this.state.gridSize * 3.5) / 2 - 1.75; 
         for(let x=0; x<this.state.gridSize; x++) { for(let z=0; z<this.state.gridSize; z++) { const tile = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), dirtMat); tile.position.set(x * 3.5 - offset, 0.25, z * 3.5 - offset); tile.receiveShadow = true; tile.userData = { occupied: false }; this.scene.add(tile); this.tiles.push(tile); } }
     }
 
-    // ==========================================
-    // SISTEMA DE INTERAÇÃO (COM O PAN CORRIGIDO)
-    // ==========================================
     setupInteractions() {
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
         
         window.addEventListener('pointerdown', (e) => {
-            if (e.target.closest('#game-ui') || e.target.closest('#market-modal')) return;
+            if (e.target.closest('#game-ui') || e.target.closest('#market-modal') || e.target.closest('#login-modal')) return;
             if (e.target.closest('.bubble-item')) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -984,7 +907,6 @@ class NebulaFarmPro {
 
         const now = Date.now();
 
-        // OBRAS (Tapumes pulando)
         for (let i = this.constructions.length - 1; i >= 0; i--) {
             const c = this.constructions[i];
             if (now - c.timer > c.duration) {
@@ -995,7 +917,6 @@ class NebulaFarmPro {
             }
         }
 
-        // FÁBRICAS (Fogo e Produto)
         this.factories.forEach(f => {
             if (f.state === 'baking') {
                 if (now - f.timer > f.duration) {
@@ -1017,7 +938,6 @@ class NebulaFarmPro {
             }
         });
 
-        // CRESCIMENTO DAS PLANTAS
         this.plants.forEach(p => {
             if (p.progress < 1) {
                 const conf = this.config[p.type];
@@ -1043,5 +963,4 @@ class NebulaFarmPro {
     }
 }
 
-// INICIA O JOGO SOMENTE QUANDO O HTML ESTIVER PRONTO
 window.addEventListener('DOMContentLoaded', () => { window.gameInstance = new NebulaFarmPro(); });
