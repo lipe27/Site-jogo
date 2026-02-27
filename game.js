@@ -1064,3 +1064,19 @@ class NebulaFarmPro {
 }
 
 window.addEventListener('DOMContentLoaded', () => { window.gameInstance = new NebulaFarmPro(); });
+// ======================================================
+// MÓDULO EXTRA: CÂMERA RESPONSIVA PARA CELULARES
+// Se a tela girar ou mudar de tamanho, o 3D se adapta!
+// ======================================================
+window.addEventListener('resize', () => {
+    if (window.gameInstance && window.gameInstance.camera) {
+        const aspect = window.innerWidth / window.innerHeight;
+        window.gameInstance.camera.left = -18 * aspect;
+        window.gameInstance.camera.right = 18 * aspect;
+        window.gameInstance.camera.top = 18;
+        window.gameInstance.camera.bottom = -18;
+        window.gameInstance.camera.updateProjectionMatrix();
+        window.gameInstance.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+});
+
