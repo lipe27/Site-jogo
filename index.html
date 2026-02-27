@@ -8,7 +8,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="loader"><div class="spinner"></div><p id="loading-text">CONECTANDO À NUVEM...</p></div>
+    <div id="loader"><div class="spinner"></div><p id="loading-text">CARREGANDO...</p></div>
+
+    <div id="login-modal" style="display: none;">
+        <div class="login-box">
+            <h2>🚜 BEM-VINDO!</h2>
+            <p>Qual será o nome da sua Fazenda?</p>
+            <input type="text" id="farm-name-input" placeholder="Ex: Felipao" maxlength="15">
+            <button id="btn-start-game">JOGAR AGORA</button>
+        </div>
+    </div>
 
     <main id="game-ui">
         <header class="game-header">
@@ -17,7 +26,7 @@
                 <div class="xp-container"><div id="xp-bar" class="xp-fill"></div></div>
             </div>
             
-            <button onclick="gameInstance.saveToCloud(false)" style="background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">💾 SALVAR</button>
+            <button onclick="gameInstance.saveToCloud(false)" class="btn-save">💾 SALVAR</button>
             
             <div class="coin-pill">💰 $<span id="money">0</span></div>
         </header>
