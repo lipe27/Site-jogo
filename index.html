@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula Farm | Login Oficial</title>
+    <title>Nebula Farm | DLC Pecuária & Pets</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 </head>
@@ -87,6 +87,7 @@
                         <button class="market-item" style="border-color: #e67e22;" onclick="gameInstance.sellItem('bread')">🍞 Pão (<span id="mkt-qty-bread">0</span>) <b>$35</b></button>
                         <button class="market-item" style="border-color: #f1c40f;" onclick="gameInstance.sellItem('cheese')">🧀 Queijo (<span id="mkt-qty-cheese">0</span>) <b>$45</b></button>
                         <button class="market-item" style="border-color: #2980b9;" onclick="gameInstance.sellItem('fish')">🐟 Peixe (<span id="mkt-qty-fish">0</span>) <b>$25</b></button>
+                        <button class="market-item" style="border-color: #689f38; background: #f1f8e9;" onclick="gameInstance.sellItem('silage')">🚜 Silagem (<span id="mkt-qty-silage">0</span>) <b>$50</b></button>
                     </div>
                 </div>
                 
@@ -103,13 +104,15 @@
                     <h3>🏭 Fábricas (Construção)</h3>
                     <button class="market-item upgrade" id="btn-bakery" onclick="gameInstance.buyBuilding('bakery', 300)">🍞 Padaria ($300)</button>
                     <button class="market-item upgrade" id="btn-dairy" onclick="gameInstance.buyBuilding('dairy', 500)">🧀 Laticínio ($500)</button>
+                    <button class="market-item upgrade" id="btn-trench" onclick="gameInstance.buyBuilding('trench', 600)">🚜 Trincheira de Silagem ($600)</button>
                 </div>
 
                 <div class="market-section">
-                    <h3>🐾 Animais</h3>
+                    <h3>🐾 Animais e Instalações</h3>
                     <button class="market-item upgrade" id="btn-coop" onclick="gameInstance.buyBuilding('coop', 200)">🐔 Galinheiro ($200)</button>
                     <button class="market-item upgrade" id="btn-pigpen" onclick="gameInstance.buyBuilding('pigpen', 400)">🐷 Chiqueiro ($400)</button>
                     <button class="market-item upgrade" id="btn-corral" onclick="gameInstance.buyBuilding('corral', 800)">🐮 Curral ($800)</button>
+                    <button class="market-item upgrade" id="btn-doghouse" onclick="gameInstance.buyBuilding('doghouse', 150)">🐶 Casinha do Cachorro ($150)</button>
                 </div>
             </div>
         </div>
@@ -118,11 +121,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
     <script src="game.js"></script>
 </body>
 </html>
