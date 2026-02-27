@@ -56,4 +56,17 @@ body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Montserra
 @keyframes popUp { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { transform: translateY(-20px) scale(1.2); opacity: 1; } 100% { transform: translateY(-100px) scale(1); opacity: 0; } }
 #loader { position: fixed; inset: 0; background: #0B1D3A; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-weight: 900; transition: 0.5s; }
 .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: #FFF; border-radius: 50%; animation: spin 1s infinite linear; margin-bottom: 20px; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
+/* BOTÃO SALVAR */
+.btn-save { background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: auto; transition: 0.2s; }
+.btn-save:hover { transform: scale(1.05); }
+
+/* TELA DE INÍCIO - NOME DA FAZENDA */
+#login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 20000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.login-box { background: #fdf6e3; padding: 30px; border-radius: 20px; border: 5px solid #d4a373; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 85%; max-width: 350px; }
+.login-box h2 { color: #388e3c; margin-top: 0; font-size: 24px; font-weight: 900; }
+.login-box p { color: #5d4037; font-weight: bold; margin-bottom: 20px; font-size: 14px;}
+#farm-name-input { width: 100%; box-sizing: border-box; padding: 15px; border-radius: 10px; border: 2px solid #a5d6a7; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 20px; text-transform: uppercase; outline: none; }
+#btn-start-game { background: #4CAF50; color: white; border: none; padding: 15px; border-radius: 30px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: 0.2s; width: 100%; }
+#btn-start-game:hover { background: #388e3c; transform: scale(1.05); }
