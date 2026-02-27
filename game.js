@@ -1,14 +1,10 @@
 /**
- * NEBULA FARM PRO - PET FIX & CLOUD SAVE
- * O motor agora tem todas as funções corretas e os pets voltaram!
+ * NEBULA FARM PRO - GOOGLE LOGIN & EXACT POSITION SAVE
+ * Login real e as fábricas agora ficam "grudadas" onde você construiu!
  */
 
-// RADAR DE ERROS: Vai mostrar na tela se algo quebrar!
 window.onerror = function(message, source, lineno) {
-    const errDiv = document.createElement('div');
-    errDiv.style = "position:absolute; top:0; left:0; width:100%; background:red; color:white; padding:15px; z-index:999999; font-weight:bold;";
-    errDiv.innerHTML = `🚨 ERRO IDENTIFICADO:<br>${message}<br>Linha: ${lineno}<br>Me mande um print disso!`;
-    document.body.appendChild(errDiv);
+    console.error(`ERRO: ${message} (Linha: ${lineno})`);
     return false;
 };
 
@@ -23,9 +19,11 @@ const firebaseConfig = {
 };
 
 let db = null;
+let auth = null;
 try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    auth = firebase.auth();
 } catch (e) {
     console.error("Firebase não carregou:", e);
 }
@@ -66,12 +64,13 @@ class NebulaFarmPro {
         this.isFishing = false;
         this.timeOfDay = 1.5; 
         
-        this.farmName = null;
+        this.currentUser = null; // Guardará as info do jogador logado pelo Google
 
         this.state = {
             money: 1000, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
             inventory: { wheat: 10, carrot: 10, corn: 0, apple: 0, orange: 0, egg: 0, milk: 0, bacon: 0, feed: 5, fish: 0, bread: 0, cheese: 0 },
             unlocked: { wheat: true, carrot: true, corn: false, apple: false, orange: false },
+            // NOVO MODELO: Agora o enclosure guarda { built: true, x: 10, z: -10 }
             enclosures: { coop: false, pigpen: false, corral: false, mill: false, bakery: false, dairy: false },
             gridSize: 6, currentMission: null
         };
@@ -100,42 +99,61 @@ class NebulaFarmPro {
     }
 
     init() {
-        try { this.farmName = localStorage.getItem('nebulafarm_savename') || null; } catch(e) {}
-        
-        const loader = document.getElementById('loader');
-        const loginModal = document.getElementById('login-modal');
+        if (!auth) return this.startGame(); // Failsafe se estiver sem net
 
-        if (!this.farmName) {
-            if(loader) loader.style.display = 'none';
-            if(loginModal) loginModal.style.display = 'flex';
+        // Escuta as mudanças de conta do Google
+        auth.onAuthStateChanged((user) => {
+            const loader = document.getElementById('loader');
+            const loginModal = document.getElementById('login-modal');
 
-            const btnStart = document.getElementById('btn-start-game');
-            if(btnStart) {
-                btnStart.addEventListener('click', () => {
-                    let val = document.getElementById('farm-name-input').value.trim();
-                    if (!val) val = "Fazenda1";
-                    this.farmName = val.replace(/\s+/g, '').toUpperCase();
-                    try { localStorage.setItem('nebulafarm_savename', this.farmName); } catch(e){}
-                    
-                    if(loginModal) loginModal.style.display = 'none';
-                    if(loader) { loader.style.display = 'flex'; document.getElementById('loading-text').innerText = "CONECTANDO..."; }
-                    this.initCloud();
-                });
+            if (user) {
+                // LOGADO COM SUCESSO!
+                this.currentUser = user;
+                if(loginModal) loginModal.style.display = 'none';
+                if(loader) {
+                    loader.style.display = 'flex';
+                    document.getElementById('loading-text').innerText = "CARREGANDO SUA FAZENDA...";
+                }
+                this.initCloud(); // Busca o save desse usuário no banco
             } else {
-                this.startGame(); 
+                // NÃO ESTÁ LOGADO
+                if(loader) loader.style.display = 'none';
+                if(loginModal) loginModal.style.display = 'flex';
             }
-        } else {
-            this.initCloud();
+        });
+
+        // Configura o botão do Google
+        const btnGoogle = document.getElementById('btn-google-login');
+        if (btnGoogle) {
+            btnGoogle.addEventListener('click', () => {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch((error) => {
+                    alert("Erro no login: " + error.message);
+                });
+            });
+        }
+
+        // Configura o botão de Sair
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+            btnLogout.addEventListener('click', () => {
+                auth.signOut().then(() => {
+                    window.location.reload(); // Recarrega a página ao sair
+                });
+            });
         }
     }
 
     initCloud() {
-        if (!db) return this.startGame();
+        if (!db || !this.currentUser) return this.startGame();
 
-        db.collection("fazendas").doc(this.farmName).get().then((doc) => {
+        // Agora o ID da fazenda é a ID oficial do Google do jogador! Totalmente seguro.
+        db.collection("fazendas").doc(this.currentUser.uid).get().then((doc) => {
             if (doc.exists) {
+                console.log("Save Encontrado!");
                 this.state = { ...this.state, ...doc.data() };
             } else {
+                console.log("Novo Jogador! Criando save...");
                 this.saveToCloud(true);
             }
             this.startGame();
@@ -146,28 +164,34 @@ class NebulaFarmPro {
     }
 
     saveToCloud(isAutoSave = false) {
-        if(!db || !this.farmName) return;
-        db.collection("fazendas").doc(this.farmName).set(this.state)
+        if(!db || !this.currentUser) return;
+        db.collection("fazendas").doc(this.currentUser.uid).set(this.state)
             .then(() => { if (!isAutoSave) this.spawnFX(window.innerWidth / 2, 80, "💾 SALVO!", "#4CAF50"); })
             .catch(() => {});
     }
 
     startGame() {
-        this.setupCore();
-        this.setupLights();
-        this.buildWorld();
-        this.setupInteractions();
-        if(!this.state.currentMission) this.generateMission(); 
-        this.updateUI();
-        
-        const loader = document.getElementById('loader');
-        if(loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 500);
+        try {
+            this.setupCore();
+            this.setupLights();
+            this.buildWorld();
+            this.setupInteractions();
+            if(!this.state.currentMission) this.generateMission(); 
+            this.updateUI();
+            
+            const loader = document.getElementById('loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+            
+            // Auto-save a cada 30 seg
+            setInterval(() => { this.saveToCloud(true); }, 30000);
+
+            requestAnimationFrame((time) => this.animate(time));
+        } catch (e) {
+            console.error(e);
         }
-        
-        setInterval(() => { this.saveToCloud(true); }, 30000);
-        requestAnimationFrame((time) => this.animate(time));
     }
 
     setupCore() {
@@ -177,7 +201,6 @@ class NebulaFarmPro {
         this.camera = new THREE.OrthographicCamera(-18 * aspect, 18 * aspect, 18, -18, 1, 1000);
         this.camera.position.set(50, 50, 50);
         this.camera.lookAt(0, 0, 0);
-        
         this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
@@ -211,15 +234,40 @@ class NebulaFarmPro {
         this.createLake(35, 25);
         this.createWindmill(-22, 10); 
 
-        if (this.state.enclosures.bakery) { this.createBakery(5, -25); const b = document.getElementById('btn-bakery'); if(b) b.style.display = 'none'; }
-        if (this.state.enclosures.dairy) { this.createDairy(15, -25); const b = document.getElementById('btn-dairy'); if(b) b.style.display = 'none'; }
+        // CRÍTICO: Constroi as fábricas exatamente nas coordenadas salvas na nuvem!
+        if (this.state.enclosures.bakery) { 
+            // Antigamente o state era true/false. Se for o state antigo, spawna num lugar padrão. Se for o novo, spawna no lugar exato!
+            let x = 5, z = -25;
+            if (this.state.enclosures.bakery.x !== undefined) { x = this.state.enclosures.bakery.x; z = this.state.enclosures.bakery.z; }
+            this.createBakery(x, z); 
+            const b = document.getElementById('btn-bakery'); if(b) b.style.display = 'none'; 
+            this.obstacles.push({ x: x, z: z, r: 5 });
+        }
+        if (this.state.enclosures.dairy) { 
+            let x = 15, z = -25;
+            if (this.state.enclosures.dairy.x !== undefined) { x = this.state.enclosures.dairy.x; z = this.state.enclosures.dairy.z; }
+            this.createDairy(x, z); 
+            const b = document.getElementById('btn-dairy'); if(b) b.style.display = 'none'; 
+            this.obstacles.push({ x: x, z: z, r: 5 });
+        }
+        
+        // Carrega Animais nos lugares corretos também
+        if (this.state.enclosures.coop) {
+            let x = 10, z = -22; if (this.state.enclosures.coop.x !== undefined) { x = this.state.enclosures.coop.x; z = this.state.enclosures.coop.z; }
+            this.buildEnclosureOld('coop', x, z); const b = document.getElementById('btn-coop'); if(b) b.style.display = 'none'; this.obstacles.push({ x, z, r: 6 });
+        }
+        if (this.state.enclosures.pigpen) {
+            let x = -5, z = 20; if (this.state.enclosures.pigpen.x !== undefined) { x = this.state.enclosures.pigpen.x; z = this.state.enclosures.pigpen.z; }
+            this.buildEnclosureOld('pigpen', x, z); const b = document.getElementById('btn-pigpen'); if(b) b.style.display = 'none'; this.obstacles.push({ x, z, r: 6 });
+        }
+        if (this.state.enclosures.corral) {
+            let x = 25, z = 5; if (this.state.enclosures.corral.x !== undefined) { x = this.state.enclosures.corral.x; z = this.state.enclosures.corral.z; }
+            this.buildEnclosureOld('corral', x, z); const b = document.getElementById('btn-corral'); if(b) b.style.display = 'none'; this.obstacles.push({ x, z, r: 8 });
+        }
 
         this.renderGrid(); 
         for(let i=0; i<45; i++) this.createTree((Math.random()-0.5)*250, (Math.random()-0.5)*250);
-        
-        // OS ANIMAIS VOLTARAM!
-        this.createPet('dog', 15, -5); 
-        this.createPet('cat', 18, -12);
+        this.createPet('dog', 15, -5); this.createPet('cat', 18, -12);
         for(let i=0; i<5; i++) this.createBird(); 
     }
 
@@ -253,12 +301,18 @@ class NebulaFarmPro {
 
     confirmPlacement() {
         if (!this.placementIsValid) return;
-        this.state.money -= this.placementCost; this.state.enclosures[this.placementType] = true;
-        const px = this.placementGhost.position.x; const pz = this.placementGhost.position.z;
+        this.state.money -= this.placementCost; 
+        
+        const px = this.placementGhost.position.x; 
+        const pz = this.placementGhost.position.z;
+
+        // O SEGREDO: Salva no banco as coordenadas X e Z exatas!
+        this.state.enclosures[this.placementType] = { built: true, x: px, z: pz };
+
         this.obstacles.push({ x: px, z: pz, r: 5 });
         this.cancelPlacement(); this.updateUI();
         this.createConstructionSite(this.placementType, px, pz, 5000);
-        this.saveToCloud();
+        this.saveToCloud(); // Salva a posição nova na nuvem na mesma hora
     }
 
     validatePlacementPosition(x, z) {
@@ -405,9 +459,6 @@ class NebulaFarmPro {
         tree.add(trunk, leaves); tree.position.set(x, 0, z); this.scene.add(tree);
     }
 
-    // ==========================================
-    // AS FUNÇÕES DOS PETS QUE FALTARAM!
-    // ==========================================
     createPet(type, startX, startZ) {
         const pet = new THREE.Group(); let speed = 0.06;
         if (type === 'dog') {
@@ -449,7 +500,7 @@ class NebulaFarmPro {
             }
         });
     }
-    
+
     renderGrid() {
         this.tiles.forEach(t => this.scene.remove(t)); this.tiles = []; const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 }); const offset = (this.state.gridSize * 3.5) / 2 - 1.75; 
         for(let x=0; x<this.state.gridSize; x++) { for(let z=0; z<this.state.gridSize; z++) { const tile = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), dirtMat); tile.position.set(x * 3.5 - offset, 0.25, z * 3.5 - offset); tile.receiveShadow = true; tile.userData = { occupied: false }; this.scene.add(tile); this.tiles.push(tile); } }
@@ -536,16 +587,12 @@ class NebulaFarmPro {
                     this.hasPanned = true;
                     this.pendingBubble = null; 
                     const f = 0.08; 
-                    
                     let newX = this.camera.position.x - (moveX * f) - (moveY * f);
                     let newZ = this.camera.position.z + (moveX * f) - (moveY * f);
-                    
                     newX = Math.max(-40, Math.min(110, newX));
                     newZ = Math.max(-40, Math.min(110, newZ));
-                    
                     this.camera.position.x = newX;
                     this.camera.position.z = newZ;
-                    
                     this.panStart = { x: e.clientX, y: e.clientY };
                 }
             }
@@ -818,20 +865,14 @@ class NebulaFarmPro {
 
     updateUI() {
         const setTxt = (id, text) => {
-            try {
-                const el = document.getElementById(id);
-                if (el) el.innerText = text;
-            } catch(e) {}
+            try { const el = document.getElementById(id); if (el) el.innerText = text; } catch(e) {}
         };
 
         setTxt('money', this.state.money);
         setTxt('silo-text', `${this.state.siloCount}/${this.state.maxSilo}`);
         setTxt('lvl', this.state.lvl);
         
-        try {
-            const xpBar = document.getElementById('xp-bar');
-            if (xpBar) xpBar.style.width = (this.state.xp / (this.state.lvl * 300)) * 100 + "%";
-        } catch(e){}
+        try { const xpBar = document.getElementById('xp-bar'); if (xpBar) xpBar.style.width = (this.state.xp / (this.state.lvl * 300)) * 100 + "%"; } catch(e){}
 
         setTxt('qty-apple', this.state.inventory.apple); 
         setTxt('qty-orange', this.state.inventory.orange); 
@@ -847,11 +888,7 @@ class NebulaFarmPro {
             const m = this.state.currentMission;
             const itemNames = { wheat: 'Trigos', carrot: 'Cenouras', apple: 'Maçãs', orange: 'Laranjas', corn: 'Milhos', egg: 'Ovos', milk: 'Leites', bacon: 'Bacons', fish: 'Peixes', bread: 'Pães', cheese: 'Queijos' };
             setTxt('mission-text', `Entregar ${m.qty} ${itemNames[m.type] || m.type}`);
-            
-            try {
-                const btnMission = document.getElementById('btn-mission');
-                if (btnMission) btnMission.disabled = this.state.inventory[m.type] < m.qty;
-            } catch(e){}
+            try { const btnMission = document.getElementById('btn-mission'); if (btnMission) btnMission.disabled = this.state.inventory[m.type] < m.qty; } catch(e){}
         }
 
         setTxt('mkt-money', this.state.money);
@@ -873,7 +910,6 @@ class NebulaFarmPro {
         if (typeof TWEEN !== 'undefined' && time) TWEEN.update(time);
         this.animations.forEach(fn => fn()); 
         
-        // As funções dos animais voltaram com segurança!
         this.updateAnimals();
         this.updatePets();
 
