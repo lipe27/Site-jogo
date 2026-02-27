@@ -126,4 +126,29 @@ body {
     #placement-ui { bottom: 15px; gap: 10px; }
     .place-btn { padding: 12px 15px; font-size: 12px; }
 }
+/* ======================================================
+   MÓDULO EXTRA: INTERFACE LIMPA (CLEAN UI)
+   ====================================================== */
+/* Esconde o inventário da tela principal de TODOS os aparelhos */
+.inventory-list {
+    display: none !important;
+}
+
+/* Tira aquele fundo preto grande do painel lateral */
+.side-panel {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Deixa a caixinha do Silo com um fundo próprio e mais bonita */
+.silo-status {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 15px;
+    border-radius: 20px;
+    margin-bottom: 15px;
+    display: inline-block;
+    border: 2px solid #d4a373;
+    color: white;
+}
 
