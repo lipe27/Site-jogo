@@ -169,5 +169,19 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000;
     display: none; pointer-events: none;
 }
+/* ======================================================
+   CORREÇÃO DE SOBREPOSIÇÃO: CLIMA E MISSÕES
+   ====================================================== */
+#weather-indicator {
+    top: 15px !important;
+    right: 15px !important;
+    z-index: 1000;
+}
+
+#mission-board {
+    top: 65px !important; /* Empurra a caixa de missões para baixo do clima */
+    right: 15px !important;
+    z-index: 1000;
+}
 
 
