@@ -170,18 +170,88 @@ body {
     display: none; pointer-events: none;
 }
 /* ======================================================
-   CORREÇÃO DE SOBREPOSIÇÃO: CLIMA E MISSÕES
+   NOVO LAYOUT: CLIMA E SALDO LADO A LADO
    ====================================================== */
-#weather-indicator {
-    top: 15px !important;
-    right: 15px !important;
+#top-right-ui {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    gap: 15px; /* Espaço entre o clima e o saldo */
+    align-items: center;
     z-index: 1000;
 }
 
-#mission-board {
-    top: 65px !important; /* Empurra a caixa de missões para baixo do clima */
-    right: 15px !important;
-    z-index: 1000;
+#weather-indicator {
+    position: static; /* Tira o absolute para alinhar do lado do saldo */
+    background: rgba(255,255,255,0.8);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: 900;
+    font-size: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: 0.5s;
 }
+
+/* Oculta a placa velha de missão que estava encavalando */
+#mission-board {
+    display: none !important;
+}
+
+/* ======================================================
+   NOVA BOLHA DE ALERTA DE MISSÃO (PULSANTE)
+   ====================================================== */
+#mission-alert {
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    animation: pulse-alert 1.5s infinite;
+    position: absolute;
+    right: -15px;
+    top: -15px;
+}
+
+@keyframes pulse-alert {
+    0% { transform: scale(1); box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+    50% { transform: scale(1.2); box-shadow: 0 0 20px rgba(231, 76, 60, 1); }
+    100% { transform: scale(1); box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+}
+
+.mission-content {
+    max-width: 320px;
+    text-align: center;
+}
+
+.mission-reward {
+    font-size: 20px;
+    font-weight: 900;
+    color: #2ecc71;
+    margin: 15px 0;
+}
+
+#btn-mission {
+    width: 100%;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 30px;
+    font-weight: 900;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: 0.2s;
+}
+#btn-mission:hover:not(:disabled) { transform: scale(1.05); }
+#btn-mission:disabled { background: #95a5a6; cursor: not-allowed; opacity: 0.7; }
 
 
