@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - MEGA DLC DEFINITIVA 🚜♻️🌧️
- * Clima Dinâmico, Reciclagem, Decoração e Trator Pilotável!
+ * NEBULA FARM PRO - CORREÇÃO DO CELEIRO + MEGA DLC 🚜♻️🌧️
+ * Celeiro arrumado, Clima Dinâmico, Reciclagem, Decoração e Trator Pilotável!
  */
 
 window.onerror = function(message, source, lineno) { console.error(`ERRO: ${message} (Linha: ${lineno})`); return false; };
@@ -22,7 +22,7 @@ class NebulaFarmPro {
         this.scene = new THREE.Scene(); this.camera = null; this.renderer = null;
         this.grass = null; this.lake = null; this.tiles = []; this.plants = []; this.animations = [];
         this.animals = []; this.pets = []; this.factories = []; this.constructions = []; this.obstacles = [];     
-        this.decorations = []; // Array pra guardar os caminhos e cercas
+        this.decorations = []; 
         
         this.isDragging = false; this.activeDragTool = null; this.lastTreePlantTime = 0; 
         this.isPanning = false; this.panStart = { x: 0, y: 0 }; this.hasPanned = false; this.pendingBubble = null;   
@@ -40,10 +40,8 @@ class NebulaFarmPro {
 
         this.state = {
             money: 1000, xp: 0, lvl: 1, siloCount: 0, maxSilo: 50,
-            // INVENTÁRIO EXPANDIDO COM LIXO E FERTILIZANTE
             inventory: { wheat: 10, carrot: 10, corn: 0, apple: 0, orange: 0, egg: 0, milk: 0, bacon: 0, feed: 5, fish: 0, bread: 0, cheese: 0, silage: 0, junk: 0, fertilizer: 0 },
             unlocked: { wheat: true, carrot: true, corn: false, apple: false, orange: false },
-            // CONSTRUÇÕES EXPANDIDAS
             enclosures: { coop: false, pigpen: false, corral: false, mill: false, bakery: false, dairy: false, trench: false, doghouse: false, recycler: false, tractor: false },
             gridSize: 6, currentMission: null, savedPlants: [], savedDecorations: [] 
         };
@@ -99,10 +97,7 @@ class NebulaFarmPro {
     saveToCloud(isAutoSave = false) {
         if(!db || !this.currentUser) return;
         this.state.savedPlants = this.plants.map(p => ({ type: p.type, x: p.mesh.position.x, z: p.mesh.position.z, plantedAt: p.plantedAt }));
-        
-        // Salva as decorações!
         this.state.savedDecorations = this.decorations.map(d => ({ type: d.type, x: d.mesh.position.x, z: d.mesh.position.z }));
-
         db.collection("fazendas").doc(this.currentUser.uid).set(this.state)
             .then(() => { if (!isAutoSave) this.spawnFX(window.innerWidth / 2, 80, "💾 SALVO!", "#4CAF50"); })
             .catch(() => {});
@@ -158,7 +153,6 @@ class NebulaFarmPro {
         
         this.createBarn(-22, -15); this.createFarmhouse(22, -10); this.createLake(35, 25); this.createWindmill(-22, 10); 
 
-        // Restaura Fábricas
         const checkB = (s, id) => { if(s){ const b = document.getElementById(id); if(b) b.style.display = 'none'; } return s; }
         if (checkB(this.state.enclosures.bakery, 'btn-bakery')) { let p = this.state.enclosures.bakery; this.createBakery(p.x||5, p.z||-25); this.obstacles.push({ x: p.x||5, z: p.z||-25, r: 5 }); }
         if (checkB(this.state.enclosures.dairy, 'btn-dairy')) { let p = this.state.enclosures.dairy; this.createDairy(p.x||15, p.z||-25); this.obstacles.push({ x: p.x||15, z: p.z||-25, r: 5 }); }
@@ -172,11 +166,7 @@ class NebulaFarmPro {
         if (checkB(this.state.enclosures.corral, 'btn-corral')) { let p = this.state.enclosures.corral; this.buildEnclosureOld('corral', p.x||25, p.z||5); this.obstacles.push({ x: p.x||25, z: p.z||5, r: 8 }); }
 
         this.renderGrid(); 
-        
-        // Restaura Plantações
         if (this.state.savedPlants) { this.state.savedPlants.forEach(sp => { if (this.config[sp.type] && this.config[sp.type].isTree) this.restoreTree(sp); else this.restoreCrop(sp); }); }
-        
-        // Restaura Decorações (Caminhos e Cercas)
         if (this.state.savedDecorations) { this.state.savedDecorations.forEach(sd => this.placeDecoration(sd.type, sd.x, sd.z, false)); }
 
         for(let i=0; i<45; i++) this.createTree((Math.random()-0.5)*250, (Math.random()-0.5)*250);
@@ -189,11 +179,7 @@ class NebulaFarmPro {
     // ==========================================
     buyBuilding(type, cost) {
         if (this.state.money < cost) { alert("Dinheiro Insuficiente!"); return; }
-        
-        // Se não for decoração e já tiver, bloqueia
-        if (type !== 'path' && type !== 'fence') {
-            if (this.state.enclosures[type]) { alert("Já possui!"); return; }
-        }
+        if (type !== 'path' && type !== 'fence') { if (this.state.enclosures[type]) { alert("Já possui!"); return; } }
         this.closeMarket(); this.enterPlacementMode(type, cost);
     }
 
@@ -205,7 +191,7 @@ class NebulaFarmPro {
         
         let ghostSize = 8;
         if(type === 'doghouse' || type === 'recycler' || type === 'tractor') ghostSize = 6; 
-        if(type === 'path' || type === 'fence') ghostSize = 4; // Decoração é menor
+        if(type === 'path' || type === 'fence') ghostSize = 4; 
         
         this.placementGhost = new THREE.Mesh(new THREE.BoxGeometry(ghostSize, 4, ghostSize), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.5 }));
         this.placementGhost.position.set(this.camera.position.x - 50, 2, this.camera.position.z - 50);
@@ -226,16 +212,13 @@ class NebulaFarmPro {
         const px = this.placementGhost.position.x; const pz = this.placementGhost.position.z;
         
         if (this.placementType === 'path' || this.placementType === 'fence') {
-            // É Decoração! Instala na hora e não entra no array de obstáculos!
             this.placeDecoration(this.placementType, px, pz, true);
         } else {
-            // É Fábrica/Animal
             this.state.enclosures[this.placementType] = { built: true, x: px, z: pz };
-            let collisionRadius = (this.placementType === 'doghouse' || this.placementType === 'tractor') ? 3 : 5;
+            let collisionRadius = (this.placementType === 'doghouse' || this.placementType === 'tractor' || this.placementType === 'recycler') ? 3 : 5;
             this.obstacles.push({ x: px, z: pz, r: collisionRadius });
             this.createConstructionSite(this.placementType, px, pz, 5000);
         }
-        
         this.cancelPlacement(); this.updateUI(); this.saveToCloud();
     }
 
@@ -244,13 +227,9 @@ class NebulaFarmPro {
         const snapX = Math.round(x / 4) * 4; const snapZ = Math.round(z / 4) * 4;
         this.placementGhost.position.set(snapX, 2, snapZ);
         let hasCollision = false;
-        
-        // Decorações podem colar nas coisas. Prédios não.
         if (this.placementType !== 'path' && this.placementType !== 'fence') {
             let safeRadius = 4;
-            for (const obs of this.obstacles) {
-                if (Math.sqrt(Math.pow(snapX - obs.x, 2) + Math.pow(snapZ - obs.z, 2)) < (safeRadius + obs.r)) { hasCollision = true; break; }
-            }
+            for (const obs of this.obstacles) { if (Math.sqrt(Math.pow(snapX - obs.x, 2) + Math.pow(snapZ - obs.z, 2)) < (safeRadius + obs.r)) { hasCollision = true; break; } }
         }
         this.placementIsValid = !hasCollision;
         this.placementGhost.material.color.setHex(hasCollision ? 0xff0000 : 0x00ff00);
@@ -260,8 +239,7 @@ class NebulaFarmPro {
     placeDecoration(type, x, z, save = false) {
         let mesh;
         if (type === 'path') {
-            mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 4), new THREE.MeshStandardMaterial({color: 0x95a5a6}));
-            mesh.position.set(x, 0.05, z);
+            mesh = new THREE.Mesh(new THREE.BoxGeometry(4, 0.1, 4), new THREE.MeshStandardMaterial({color: 0x95a5a6})); mesh.position.set(x, 0.05, z);
         } else if (type === 'fence') {
             mesh = new THREE.Group();
             const p1 = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2, 0.3), new THREE.MeshStandardMaterial({color: 0x8B4513})); p1.position.set(-1.5, 1, 0);
@@ -269,9 +247,7 @@ class NebulaFarmPro {
             const cross = new THREE.Mesh(new THREE.BoxGeometry(4, 0.3, 0.2), new THREE.MeshStandardMaterial({color: 0x8B4513})); cross.position.set(0, 1.2, 0);
             mesh.add(p1, p2, cross); mesh.position.set(x, 0, z);
         }
-        this.scene.add(mesh);
-        this.decorations.push({ mesh, type, x, z });
-        if (save) this.saveToCloud(true);
+        this.scene.add(mesh); this.decorations.push({ mesh, type, x, z }); if (save) this.saveToCloud(true);
     }
 
     createConstructionSite(type, x, z, buildTimeMs) {
@@ -297,7 +273,7 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // MEGA ESTRUTURAS
+    // MEGA ESTRUTURAS E CELEIRO CORRIGIDO
     // ==========================================
     createRecycler(x, z) {
         const recGroup = new THREE.Group();
@@ -312,22 +288,16 @@ class NebulaFarmPro {
         const tractorGroup = new THREE.Group();
         const bodyMat = new THREE.MeshStandardMaterial({color: 0xe74c3c, roughness: 0.5});
         const tireMat = new THREE.MeshStandardMaterial({color: 0x111111, roughness: 0.9});
-        
         const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 4), bodyMat); body.position.y = 1.5; body.castShadow = true;
         const cab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.5, 1.5), new THREE.MeshStandardMaterial({color: 0xffffff, transparent: true, opacity: 0.5})); cab.position.set(0, 3, -1);
         const roof = new THREE.Mesh(new THREE.BoxGeometry(2, 0.2, 1.8), bodyMat); roof.position.set(0, 3.8, -1);
-        
         const w1 = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 16), tireMat); w1.rotation.z = Math.PI/2; w1.position.set(1.2, 1, -1);
         const w2 = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 16), tireMat); w2.rotation.z = Math.PI/2; w2.position.set(-1.2, 1, -1);
         const w3 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16), tireMat); w3.rotation.z = Math.PI/2; w3.position.set(1.2, 0.6, 1.5);
         const w4 = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16), tireMat); w4.rotation.z = Math.PI/2; w4.position.set(-1.2, 0.6, 1.5);
-        
         tractorGroup.add(body, cab, roof, w1, w2, w3, w4); tractorGroup.position.set(x, 0, z);
-        
-        // Colocamos o userData em TUDO para o Raycaster achar o clique!
         tractorGroup.children.forEach(c => c.userData = { isTractor: true, parentRef: tractorGroup }); 
-        this.scene.add(tractorGroup);
-        this.tractor.mesh = tractorGroup; this.tractor.active = true;
+        this.scene.add(tractorGroup); this.tractor.mesh = tractorGroup; this.tractor.active = true;
     }
 
     createTrench(x, z) {
@@ -347,8 +317,7 @@ class NebulaFarmPro {
         const base = new THREE.Mesh(new THREE.BoxGeometry(3, 2.5, 3), new THREE.MeshStandardMaterial({color: 0x8B4513})); base.position.y = 1.25; base.castShadow = true;
         const roof = new THREE.Mesh(new THREE.ConeGeometry(2.5, 2, 4), new THREE.MeshStandardMaterial({color: 0xb71c1c})); roof.position.y = 3.5; roof.rotation.y = Math.PI/4; roof.castShadow = true;
         dhGroup.add(base, roof); dhGroup.position.set(x, 0, z); this.scene.add(dhGroup);
-        const dog = this.pets.find(p => p.type === 'dog');
-        if (dog) { dog.mesh.position.set(x, 0, z + 3); dog.target.set(x, 0, z + 3); }
+        const dog = this.pets.find(p => p.type === 'dog'); if (dog) { dog.mesh.position.set(x, 0, z + 3); dog.target.set(x, 0, z + 3); }
     }
 
     createFarmhouse(x, z) {
@@ -387,13 +356,22 @@ class NebulaFarmPro {
         bakeryGroup.children.forEach(c => c.userData = { isFactory: true, parentRef: bakeryGroup, type: 'bakery' }); this.scene.add(bakeryGroup);
         this.factories.push({ mesh: bakeryGroup, type: 'bakery', state: 'idle', timer: 0, duration: 15000 });
     }
+    
+    // --- AQUI ESTÁ A CORREÇÃO DO CELEIRO! ---
     createBarn(x, z) {
         if (typeof THREE.GLTFLoader === 'undefined') return;
         const loader = new THREE.GLTFLoader();
         loader.load('celeiro.glb', (gltf) => {
             const barn = gltf.scene; barn.position.set(x, 0, z); barn.scale.set(1, 1, 1); 
             barn.traverse((node) => {
-                if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; node.material = new THREE.MeshStandardMaterial({ color: 0xFF0000 }); }
+                if (node.isMesh) {
+                    node.castShadow = true; node.receiveShadow = true;
+                    const nm = node.name.toLowerCase(); const ng = node.parent ? node.parent.name.toLowerCase() : "";
+                    // RESTAURANDO A PINTURA ORIGINAL:
+                    if (nm.includes('triangle') || ng.includes('triangle')) node.material = new THREE.MeshStandardMaterial({ color: 0x808080 });
+                    else if (nm.includes('window') || nm.includes('door') || ng.includes('window')) node.material = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+                    else node.material = new THREE.MeshStandardMaterial({ color: 0xFF0000 }); 
+                }
             });
             this.scene.add(barn);
         }, undefined, () => {});
@@ -521,7 +499,7 @@ class NebulaFarmPro {
                     this.tractor.target = new THREE.Vector3(hitsGrass[0].point.x, 0, hitsGrass[0].point.z);
                     this.spawnFX(hitsGrass[0].point.x, e.clientY, "🎯", "#e74c3c");
                 }
-                return; // Impede abrir bolhas enquanto pilota
+                return; 
             }
 
             if (this.placementMode) { const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) this.validatePlacementPosition(hitsGrass[0].point.x, hitsGrass[0].point.z); return; }
@@ -535,7 +513,7 @@ class NebulaFarmPro {
                 if (hitsTractor.length > 0) {
                     this.tractor.isDriving = true;
                     document.getElementById('driving-alert').style.display = 'block';
-                    this.isPanning = false; // Desativa pan
+                    this.isPanning = false; 
                     return;
                 }
             }
@@ -629,7 +607,6 @@ class NebulaFarmPro {
         } else if (context === 'trench_ready') {
             bubble.innerHTML += this.createBubbleItem('collect_silage', '🚜', 'PEGAR');
         } else if (context === 'recycler_idle') {
-            // RECICLAGEM BOLHA
             const canRecycle = this.state.inventory.junk >= 2 ? this.state.inventory.junk : 0;
             bubble.innerHTML += this.createBubbleItem('recycle', '🥾', '-2 Lixo', canRecycle === 0);
         } else if (context === 'recycler_ready') {
@@ -729,7 +706,7 @@ class NebulaFarmPro {
         setTimeout(() => {
             this.isFishing = false; const chance = Math.random();
             if (chance > 0.4) { this.state.inventory.fish++; this.state.siloCount++; this.state.xp += this.config.fish.xp; this.spawnFX(x, y - 50, "🎣 PEGOU UM PEIXE!", "#4CAF50"); this.checkLevel(); } 
-            else { this.state.inventory.junk++; this.spawnFX(x, y - 50, "🥾 BOTA VELHA (+1 Lixo)", "#9e9e9e"); } // LIXO REAL
+            else { this.state.inventory.junk++; this.spawnFX(x, y - 50, "🥾 BOTA VELHA (+1 Lixo)", "#9e9e9e"); } 
             this.updateUI(); this.saveToCloud(true);
         }, 3000);
     }
@@ -870,9 +847,9 @@ class NebulaFarmPro {
         const now = Date.now();
 
         // ================= CLIMA =================
-        if (now - this.weather.timer > 60000) { // Muda o clima a cada 60 seg
+        if (now - this.weather.timer > 60000) { 
             this.weather.timer = now;
-            this.weather.isRaining = Math.random() > 0.7; // 30% de chance de chover
+            this.weather.isRaining = Math.random() > 0.7; 
             const ind = document.getElementById('weather-indicator');
             if (this.weather.isRaining) {
                 this.rainParticles.visible = true;
@@ -886,14 +863,13 @@ class NebulaFarmPro {
         if (this.weather.isRaining && this.rainParticles) {
             const positions = this.rainParticles.geometry.attributes.position.array;
             for(let i=1; i < positions.length; i+=3) {
-                positions[i] -= 1.5; // Cai pra baixo
+                positions[i] -= 1.5; 
                 if(positions[i] < 0) positions[i] = 80;
             }
             this.rainParticles.geometry.attributes.position.needsUpdate = true;
         }
 
         // ================= CICLO DIA/NOITE =================
-        // Se chover, fica nublado. Se não, segue o dia/noite normal.
         if (!this.weather.isRaining) this.timeOfDay += 0.0005; 
         const sunHeight = this.weather.isRaining ? 0.2 : Math.sin(this.timeOfDay);
         this.sun.position.y = sunHeight * 60; this.sun.position.x = Math.cos(this.timeOfDay) * 60;
@@ -902,14 +878,13 @@ class NebulaFarmPro {
             this.scene.background.lerp(new THREE.Color(0x87CEEB), 0.05); this.scene.fog.color.lerp(new THREE.Color(0x87CEEB), 0.05);
             this.sun.intensity = sunHeight * 1.3; this.ambientLight.intensity = 0.55; this.houseLight.intensity = 0; 
         } else {
-            const darkColor = this.weather.isRaining ? 0x5a6e7f : 0x0B1D3A; // Cinza pra chuva, Escuro pra noite
+            const darkColor = this.weather.isRaining ? 0x5a6e7f : 0x0B1D3A; 
             this.scene.background.lerp(new THREE.Color(darkColor), 0.05); this.scene.fog.color.lerp(new THREE.Color(darkColor), 0.05);
             this.sun.intensity = 0; this.ambientLight.intensity = 0.3; this.houseLight.intensity = 2; 
         }
 
         // ================= PILOTAGEM DO TRATOR =================
         if (this.tractor.isDriving && this.tractor.mesh && this.tractor.target) {
-            // A câmera segue o trator!
             this.camera.position.x += (this.tractor.mesh.position.x + 50 - this.camera.position.x) * 0.05;
             this.camera.position.z += (this.tractor.mesh.position.z + 50 - this.camera.position.z) * 0.05;
             
@@ -921,13 +896,11 @@ class NebulaFarmPro {
                 this.tractor.mesh.position.z += (dz / dist) * 0.3;
                 this.tractor.mesh.rotation.y = Math.atan2(dx, dz);
                 
-                // Trator Colheitadeira!
                 for (let i = this.plants.length - 1; i >= 0; i--) {
                     const p = this.plants[i];
                     if (p.progress >= 1 && !this.config[p.type].isTree) {
                         const pDist = Math.sqrt(Math.pow(p.mesh.position.x - this.tractor.mesh.position.x, 2) + Math.pow(p.mesh.position.z - this.tractor.mesh.position.z, 2));
                         if (pDist < 3) {
-                            // COLHE!
                             if (this.state.siloCount + this.config[p.type].yield <= this.state.maxSilo) {
                                 this.state.inventory[p.type] += this.config[p.type].yield; this.state.siloCount += this.config[p.type].yield; this.state.xp += this.config[p.type].xp;
                                 p.tile.userData.occupied = false; this.scene.remove(p.mesh); this.plants.splice(i, 1);
@@ -975,7 +948,7 @@ class NebulaFarmPro {
         this.plants.forEach(p => {
             if (p.progress < 1) {
                 const conf = this.config[p.type]; 
-                p.progress += (growthMult * 16) / conf.time; // 16ms por frame
+                p.progress += (growthMult * 16) / conf.time; 
                 if (p.progress > 1) p.progress = 1;
                 
                 if (!conf.isTree) { p.mesh.scale.set(1 + p.progress*2, 1 + p.progress*10, 1 + p.progress*2); p.mesh.position.y = 0.4 + (p.mesh.scale.y * 0.05); } 
