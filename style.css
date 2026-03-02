@@ -151,4 +151,23 @@ body {
     border: 2px solid #d4a373;
     color: white;
 }
+/* ======================================================
+   MEGA DLC: CLIMA, TRATOR E NOVOS ITENS
+   ====================================================== */
+#weather-indicator {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(255,255,255,0.8); padding: 5px 15px;
+    border-radius: 20px; font-weight: 900; font-size: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.5s;
+}
+.weather-clear { color: #f39c12; }
+.weather-rain { color: #2980b9; background: rgba(200,220,255,0.9) !important; }
+.driving-alert {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #e74c3c; color: white; padding: 10px 20px;
+    border-radius: 30px; font-weight: 900; font-size: 16px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000;
+    display: none; pointer-events: none;
+}
+
 
