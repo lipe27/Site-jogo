@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - CÓDIGO 100% COMPLETO 🚜♻️🌧️
- * Celeiro corrigido, Clima, Reciclagem, Trator e NPCs (Zé, Ana e Pescador Tião!)
+ * NEBULA FARM PRO - CÓDIGO 100% COMPLETO 🚜
+ * Mercado corrigido no CSS e NPCs quadrados estilo Minecraft!
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -327,7 +327,7 @@ class NebulaFarmPro {
         for (let i=0; i<5; i++) { this.createBird(); }
 
         // =====================================
-        // OS 3 NPCS PERSONALIZADOS PARA O FELIPÃO
+        // OS 3 NPCS QUADRADOS (MINECRAFT STYLE)
         // =====================================
         this.createNPC('Fazendeiro Zé', -10, 5, 0x2980b9, [
             "Belo dia para plantar, Felipão!", 
@@ -766,26 +766,65 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // 6. VIDA (ANIMAIS, PETS E NPCS)
+    // 6. VIDA (ANIMAIS, PETS E NPCS QUADRADOS)
     // ==========================================
     createNPC(name, x, z, color, phrases) {
         const npcGroup = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5), new THREE.MeshStandardMaterial({color: color})); 
-        body.position.y = 0.75; body.castShadow = true;
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0xffccaa})); 
-        head.position.y = 1.7; head.castShadow = true;
-        
-        npcGroup.add(body, head);
-        
-        if (name.includes("Z") || name.includes("Tião")) { 
-            const hat = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 8), new THREE.MeshStandardMaterial({color: 0xe67e22})); 
-            hat.position.y = 2.1; npcGroup.add(hat); 
+
+        // Materiais
+        const skinMat = new THREE.MeshStandardMaterial({color: 0xffccaa});
+        const shirtMat = new THREE.MeshStandardMaterial({color: color});
+        const pantsMat = new THREE.MeshStandardMaterial({color: 0x333333});
+
+        // Cabeça (Cubo)
+        const head = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), skinMat);
+        head.position.y = 2.5;
+        npcGroup.add(head);
+
+        // Corpo (Retângulo)
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 0.5), shirtMat);
+        body.position.y = 1.25;
+        npcGroup.add(body);
+
+        // Braços
+        const armGeo = new THREE.BoxGeometry(0.4, 1.5, 0.4);
+        const leftArm = new THREE.Mesh(armGeo, skinMat);
+        leftArm.position.set(-0.7, 1.25, 0);
+        npcGroup.add(leftArm);
+        const rightArm = new THREE.Mesh(armGeo, skinMat);
+        rightArm.position.set(0.7, 1.25, 0);
+        npcGroup.add(rightArm);
+
+        // Pernas
+        const legGeo = new THREE.BoxGeometry(0.45, 1.5, 0.45);
+        const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+        leftLeg.position.set(-0.25, 0.5, 0);
+        npcGroup.add(leftLeg);
+        const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+        rightLeg.position.set(0.25, 0.5, 0);
+        npcGroup.add(rightLeg);
+
+        // Chapéu Quadrado (se aplicável)
+        if (name.includes("Zé") || name.includes("Tião")) {
+             const hatBrim = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 1.4), new THREE.MeshStandardMaterial({color: 0x8B4513}));
+             hatBrim.position.y = 3.05;
+             const hatTop = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.8), new THREE.MeshStandardMaterial({color: 0x8B4513}));
+             hatTop.position.y = 3.3;
+             npcGroup.add(hatBrim, hatTop);
         }
-        
+
         npcGroup.position.set(x, 0, z);
-        npcGroup.children.forEach(c => c.userData = { isNPC: true, parentRef: npcGroup }); 
+        // Escala um pouco menor para não ficarem gigantes
+        npcGroup.scale.set(0.8, 0.8, 0.8);
+
+        npcGroup.traverse((child) => {
+             if(child.isMesh) {
+                 child.castShadow = true;
+                 child.userData = { isNPC: true, parentRef: npcGroup };
+             }
+        });
         this.scene.add(npcGroup);
-        
+
         this.npcs.push({ 
             mesh: npcGroup, 
             name: name, 
@@ -803,7 +842,6 @@ class NebulaFarmPro {
                 npc.timer--;
                 if (npc.timer <= 0) { 
                     npc.state = 'walking'; 
-                    
                     // O Pescador não sai de perto do lago!
                     if (npc.name.includes("Pescador")) {
                         npc.target.set(35 + (Math.random() - 0.5) * 15, 0, 25 + (Math.random() - 0.5) * 15);
