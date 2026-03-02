@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula Farm | MEGA DLC Definitiva</title>
+    <title>Nebula Farm | O Retorno da Casa & Novo Layout</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 </head>
@@ -22,40 +22,30 @@
     </div>
 
     <main id="game-ui" style="display: none;">
-        <div id="weather-indicator" class="weather-clear">☀️ ENSOLARADO</div>
+        
+        <div id="top-right-ui">
+            <div id="weather-indicator" class="weather-clear">☀️ ENSOLARADO</div>
+            <div class="coin-pill">💰 $<span id="money">1000</span></div>
+        </div>
+
         <div id="driving-alert" class="driving-alert">🚜 PILOTANDO O TRATOR! Clique no chão para andar.</div>
 
         <header class="game-header">
             <div class="user-stats">
                 <div class="lvl-badge">LVL <span id="lvl">1</span></div>
                 <div class="xp-container"><div id="xp-bar" class="xp-fill"></div></div>
+                
+                <div id="mission-alert" class="hidden" onclick="gameInstance.openMissionModal()">❗️</div>
             </div>
+            
             <div style="display: flex; gap: 10px;">
                 <button onclick="gameInstance.saveToCloud(false)" class="btn-save">💾 SALVAR</button>
                 <button id="btn-logout" class="btn-logout">🚪 SAIR</button>
             </div>
-            <div class="coin-pill">💰 $<span id="money">0</span></div>
         </header>
-
-        <div id="mission-board">
-            <h4>📋 PEDIDO ESPECIAL</h4>
-            <p id="mission-text">Colha 5 Trigos</p>
-            <button onclick="gameInstance.completeMission()" id="btn-mission">ENTREGAR</button>
-        </div>
 
         <aside class="side-panel">
             <div class="silo-status">🧺 SILO: <span id="silo-text">0/50</span></div>
-            <div class="inventory-list">
-                <div>🍎 <span id="qty-apple">0</span></div>
-                <div>🍊 <span id="qty-orange">0</span></div>
-                <div>🥚 <span id="qty-egg">0</span></div>
-                <div>🥛 <span id="qty-milk">0</span></div>
-                <div>🥓 <span id="qty-bacon">0</span></div>
-                <div style="color: #e67e22;">🍞 <span id="qty-bread">0</span></div>
-                <div style="color: #f1c40f;">🧀 <span id="qty-cheese">0</span></div>
-                <div style="color: #4fc3f7;">🐟 <span id="qty-fish">0</span></div>
-                <div style="margin-top: 5px; color: #FFD700;">🥣 <span id="qty-feed-inv">5</span></div>
-            </div>
             <button class="btn-market" onclick="gameInstance.openMarket()">🏪 MERCADO</button>
         </aside>
 
@@ -67,11 +57,21 @@
         </div>
     </main>
 
+    <div id="mission-modal" class="modal-hidden">
+        <div class="modal-content mission-content">
+            <button class="close-btn" onclick="gameInstance.closeMissionModal()">X</button>
+            <h2>📋 PEDIDO ESPECIAL</h2>
+            <p id="mission-text">Colha 5 Trigos</p>
+            <p class="mission-reward">Recompensa: 💰 $<span id="mission-reward-val">0</span></p>
+            <button onclick="gameInstance.completeMission()" id="btn-mission">ENTREGAR</button>
+        </div>
+    </div>
+
     <div id="market-modal" class="modal-hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>🏪 MERCADO</h2>
-                <div class="market-balance">Saldo: 💰 $<span id="mkt-money">0</span></div>
+                <div class="market-balance">Saldo: 💰 $<span id="mkt-money">1000</span></div>
                 <button class="close-btn" onclick="gameInstance.closeMarket()">X</button>
             </div>
             
