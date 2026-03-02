@@ -1,3 +1,4 @@
+/* ESTILO GERAL E LOADING */
 body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Montserrat', sans-serif; background: #87CEEB; user-select: none; }
 #loader { position: fixed; inset: 0; background: #0B1D3A; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; color: white; transition: 0.5s; }
 .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
@@ -12,71 +13,88 @@ body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Montserrat',
 .google-btn img { width: 20px; height: 20px; }
 .google-btn:hover { background: #f5f5f5; transform: scale(1.05); }
 
-/* A NOVA BARRA DO TOPO (NÃO ENCAVALA MAIS!) */
+/* UI TOPO */
 .game-header { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 100; pointer-events: none; }
 .center-section { display: flex; gap: 10px; pointer-events: auto; }
 .right-section { display: flex; gap: 10px; align-items: center; pointer-events: auto; }
-
-/* BOTOES TOPO */
 .btn-save { background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; }
 .btn-logout { background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; }
 .btn-save:hover, .btn-logout:hover { transform: scale(1.05); }
 .coin-pill { background: #FFD700; color: #b71c1c; padding: 8px 20px; border-radius: 30px; font-weight: 900; font-size: 18px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-
-/* LEVEL */
 .user-stats { background: rgba(0,0,0,0.6); padding: 10px 15px; border-radius: 20px; color: white; display: flex; flex-direction: column; gap: 5px; border: 2px solid #a5d6a7; min-width: 120px; }
 .lvl-badge { font-weight: 900; font-size: 14px; }
 .xp-container { width: 100%; background: #555; border-radius: 10px; height: 10px; overflow: hidden; }
 .xp-fill { height: 100%; background: #4CAF50; width: 0%; transition: width 0.3s; }
-
-/* ALERTA MISSÃO PERFEITO */
 #mission-alert { position: absolute; right: -15px; top: -15px; background: #e74c3c; color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); animation: pulse-alert 1.5s infinite; z-index: 100; border: 2px solid white;}
 @keyframes pulse-alert { 0% { transform: scale(1); box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); } 50% { transform: scale(1.2); box-shadow: 0 0 20px rgba(231, 76, 60, 1); } 100% { transform: scale(1); box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); } }
 .hidden { display: none !important; }
 
-/* MODAIS (MERCADO E MISSÃO) */
+/* --- CORREÇÃO DO MERCADO E MODAIS --- */
 .modal-hidden { display: none !important; }
-#market-modal, #mission-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
-.modal-content { background: #fdf6e3; width: 90%; max-width: 800px; height: 85vh; border-radius: 20px; border: 5px solid #d4a373; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; position: relative;}
+#market-modal, #mission-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 20px; box-sizing: border-box;}
+
+.modal-content { 
+    background: #fdf6e3; 
+    width: 100%; 
+    max-width: 850px; 
+    height: 90vh; /* Altura máxima fixa */
+    max-height: 800px;
+    border-radius: 20px; 
+    border: 5px solid #d4a373; 
+    padding: 20px; 
+    box-sizing: border-box; 
+    display: flex; 
+    flex-direction: column; /* Organiza em coluna */
+    position: relative;
+}
+
 .mission-content { height: auto; max-width: 350px; text-align: center; }
-.close-btn { position: absolute; top: -15px; right: -15px; width: 40px; height: 40px; background: #e74c3c; color: white; border: none; border-radius: 50%; font-weight: 900; font-size: 20px; cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.3); transition: 0.2s;}
+
+.close-btn { position: absolute; top: -15px; right: -15px; width: 40px; height: 40px; background: #e74c3c; color: white; border: none; border-radius: 50%; font-weight: 900; font-size: 20px; cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.3); transition: 0.2s; z-index: 10;}
 .close-btn:hover { transform: scale(1.1); }
 
-/* ESTILO MERCADO */
-.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #d4a373; padding-bottom: 10px; margin-bottom: 15px;}
-.modal-header h2 { margin: 0; color: #388e3c; }
-.market-balance { background: #FFD700; padding: 10px 20px; border-radius: 20px; font-weight: 900; color: #b71c1c; border: 2px solid white;}
-.market-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; padding-right: 10px; }
-.market-section { background: rgba(255,255,255,0.5); padding: 15px; border-radius: 15px; border: 2px dashed #bdc3c7;}
-.market-section h3 { margin-top: 0; color: #5d4037; font-size: 16px; text-align: center;}
-.sell-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px;}
-.market-item { background: white; border: 2px solid #a5d6a7; padding: 10px; border-radius: 15px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; }
+/* Header do mercado não encolhe */
+.modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #d4a373; padding-bottom: 15px; margin-bottom: 15px; flex-shrink: 0; }
+.modal-header h2 { margin: 0; color: #388e3c; font-size: 22px;}
+.market-balance { background: #FFD700; padding: 8px 15px; border-radius: 20px; font-weight: 900; color: #b71c1c; border: 2px solid white; font-size: 14px;}
+
+/* A ÁREA DE ROLAGEM CORRIGIDA */
+.market-grid { 
+    flex: 1; /* Ocupa todo o espaço restante */
+    overflow-y: auto; /* Habilita rolagem vertical */
+    display: grid; 
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Colunas mais flexíveis */
+    gap: 15px; 
+    padding-right: 5px; /* Espaço para a barra de rolagem não comer conteúdo */
+}
+
+.market-section { background: rgba(255,255,255,0.5); padding: 15px; border-radius: 15px; border: 2px dashed #bdc3c7; height: fit-content; }
+.market-section h3 { margin-top: 0; color: #5d4037; font-size: 16px; text-align: center; margin-bottom: 10px;}
+.sell-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px;}
+
+.market-item { background: white; border: 2px solid #a5d6a7; padding: 10px; border-radius: 15px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; font-size: 13px; text-align: center;}
+.market-item b { color: #388e3c; }
 .market-item:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); border-color: #388e3c; }
 .buy-seed { border-color: #3498db; } .buy-seed:hover { border-color: #2980b9; }
 .upgrade { border-color: #9b59b6; } .upgrade:hover { border-color: #8e44ad; }
+/* ------------------------------------- */
 
-/* BOTAO MISSÃO INTERNO */
+/* OUTROS ELEMENTOS UI */
 .mission-reward { font-size: 20px; font-weight: 900; color: #2ecc71; margin: 15px 0; }
 #btn-mission { width: 100%; background: #4CAF50; color: white; border: none; padding: 15px; border-radius: 30px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: 0.2s; }
 #btn-mission:hover:not(:disabled) { transform: scale(1.05); }
 #btn-mission:disabled { background: #95a5a6; cursor: not-allowed; opacity: 0.7; }
-
-/* PAINEL LATERAL */
 .side-panel { position: absolute; left: 15px; bottom: 15px; pointer-events: none; z-index: 50;}
 .silo-status { background: rgba(0, 0, 0, 0.8); padding: 10px 15px; border-radius: 20px; margin-bottom: 10px; border: 2px solid #d4a373; color: white; font-weight: 900; pointer-events: auto; display: inline-block;}
 .btn-market { background: #2196F3; color: white; border: none; padding: 15px 25px; border-radius: 20px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: auto; transition: 0.2s; border: 2px solid white;}
 .btn-market:hover { transform: scale(1.05); }
-
-/* BOLHAS E EFEITOS */
 #bubble-menu { position: absolute; display: none; gap: 10px; transform: translate(-50%, -100%); margin-top: -20px; z-index: 100; pointer-events: none; }
 .bubble-item { width: 60px; height: 60px; background: #fff; border: 3px solid #3498db; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 24px; cursor: grab; box-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: auto; transition: 0.2s; }
 .bubble-item:hover { transform: scale(1.1); }
 .bubble-item small { font-size: 12px; font-weight: bold; color: #333; margin-top: 2px; }
 .bubble-item.locked { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
-.floating-feedback { position: absolute; font-weight: 900; font-size: 20px; text-shadow: 2px 2px 0 #000; animation: floatUp 1s forwards; pointer-events: none; z-index: 200; transform: translate(-50%, -50%); }
-@keyframes floatUp { 0% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -50px; } }
-
-/* ARQUITETO E CLIMA */
+.floating-feedback { position: absolute; font-weight: 900; font-size: 20px; text-shadow: 2px 2px 0 #000; animation: floatUp 1s forwards; pointer-events: none; z-index: 200; transform: translate(-50%, -50%); white-space: nowrap; }
+@keyframes floatUp { 0% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -80px; } }
 #placement-ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; pointer-events: auto; }
 .place-btn { border: none; padding: 15px 30px; border-radius: 30px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: 0.2s; color: white; }
 .place-btn.cancel { background: #e74c3c; } .place-btn.cancel:hover { background: #c0392b; }
@@ -86,10 +104,17 @@ body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Montserrat',
 .weather-rain { color: #2980b9; background: rgba(200,220,255,0.9) !important; }
 .driving-alert { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 10px 20px; border-radius: 30px; font-weight: 900; font-size: 16px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; pointer-events: none; }
 
-/* RESPONSIVIDADE (CELULAR) */
+/* RESPONSIVIDADE */
 @media (max-width: 768px) {
     .game-header { flex-wrap: wrap; }
     .center-section { order: 3; width: 100%; justify-content: center; margin-top: 10px; }
-    .market-grid { grid-template-columns: 1fr; }
-    .sell-grid { grid-template-columns: repeat(2, 1fr); }
+    .market-grid { grid-template-columns: 1fr; } /* Em celulares, força 1 coluna por seção */
+    .sell-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+     .modal-content { padding: 15px; height: 95vh; }
+     .modal-header h2 { font-size: 18px; }
+     .market-balance { font-size: 12px; padding: 5px 10px; }
+     .sell-grid { grid-template-columns: repeat(2, 1fr); }
 }
