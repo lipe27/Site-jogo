@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - CÓDIGO 100% COMPLETO E FORMATADO 🚜♻️🌧️
- * Fim do mundo resolvido, Dinheiro em $1000, Celeiro e Casa perfeitos.
+ * NEBULA FARM PRO - CÓDIGO 100% COMPLETO 🚜♻️🌧️
+ * Celeiro corrigido, Clima, Reciclagem, Trator e NPCs (Zé, Ana e Pescador Tião!)
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -44,6 +44,7 @@ class NebulaFarmPro {
         this.animations = [];
         this.animals = []; 
         this.pets = []; 
+        this.npcs = []; 
         this.factories = []; 
         this.constructions = []; 
         this.obstacles = [];     
@@ -158,7 +159,6 @@ class NebulaFarmPro {
             if (doc.exists) {
                 this.state = { ...this.state, ...doc.data() };
                 
-                // PEDIDO DO FELIPÃO: Força o saldo para $1000 exatos!
                 this.state.money = 1000;
                 
                 if (this.state.inventory.silage === undefined) this.state.inventory.silage = 0;
@@ -273,7 +273,6 @@ class NebulaFarmPro {
     }
 
     buildWorld() {
-        // GRAMA GIGANTE! Passou de 300 para 3000 metros. O fim do mundo sumiu.
         this.grass = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x7cb342 }));
         this.grass.rotation.x = -Math.PI / 2; 
         this.grass.receiveShadow = true; 
@@ -326,6 +325,27 @@ class NebulaFarmPro {
         this.createPet('cat', 18, -12);
         
         for (let i=0; i<5; i++) { this.createBird(); }
+
+        // =====================================
+        // OS 3 NPCS PERSONALIZADOS PARA O FELIPÃO
+        // =====================================
+        this.createNPC('Fazendeiro Zé', -10, 5, 0x2980b9, [
+            "Belo dia para plantar, Felipão!", 
+            "Cuidado com as vacas, elas estão famintas!", 
+            "Sua fazenda é a mais bonita da região, chefe!"
+        ]);
+        
+        this.createNPC('Visitante Ana', 15, 10, 0x9b59b6, [
+            "Vim da cidade só pra comprar seu queijo!", 
+            "O ar daqui é ótimo. Parabéns pelo trabalho, Felipão!", 
+            "Que trator bonito você comprou!"
+        ]);
+        
+        this.createNPC('Pescador Tião', 25, 20, 0xf1c40f, [
+            "A isca de milho é a melhor que tem, Felipão!", 
+            "Hoje o peixe não tá querendo fisgar...", 
+            "Cuidado para não pescar uma bota velha!"
+        ]);
     }
 
     // ==========================================
@@ -478,8 +498,6 @@ class NebulaFarmPro {
     // ==========================================
     // 5. CRIAÇÃO DAS FÁBRICAS E ESTRUTURAS
     // ==========================================
-    
-    // A CASA DETALHADA COM CHAMINÉ E JANELAS!
     createFarmhouse(x, z) {
         const house = new THREE.Group();
         
@@ -532,7 +550,6 @@ class NebulaFarmPro {
         this.scene.add(house);
     }
 
-    // CELEIRO COM CORES E TEXTURAS CORRETAS!
     createBarn(x, z) {
         if (typeof THREE.GLTFLoader === 'undefined') return;
         
@@ -749,8 +766,67 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // 6. ANIMAIS E PETS
+    // 6. VIDA (ANIMAIS, PETS E NPCS)
     // ==========================================
+    createNPC(name, x, z, color, phrases) {
+        const npcGroup = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5), new THREE.MeshStandardMaterial({color: color})); 
+        body.position.y = 0.75; body.castShadow = true;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshStandardMaterial({color: 0xffccaa})); 
+        head.position.y = 1.7; head.castShadow = true;
+        
+        npcGroup.add(body, head);
+        
+        if (name.includes("Z") || name.includes("Tião")) { 
+            const hat = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 8), new THREE.MeshStandardMaterial({color: 0xe67e22})); 
+            hat.position.y = 2.1; npcGroup.add(hat); 
+        }
+        
+        npcGroup.position.set(x, 0, z);
+        npcGroup.children.forEach(c => c.userData = { isNPC: true, parentRef: npcGroup }); 
+        this.scene.add(npcGroup);
+        
+        this.npcs.push({ 
+            mesh: npcGroup, 
+            name: name, 
+            speed: 0.04, 
+            target: new THREE.Vector3(x, 0, z), 
+            state: 'idle', 
+            timer: Math.random() * 200, 
+            phrases: phrases 
+        });
+    }
+
+    updateNPCs() {
+        this.npcs.forEach(npc => {
+            if (npc.state === 'idle') {
+                npc.timer--;
+                if (npc.timer <= 0) { 
+                    npc.state = 'walking'; 
+                    
+                    // O Pescador não sai de perto do lago!
+                    if (npc.name.includes("Pescador")) {
+                        npc.target.set(35 + (Math.random() - 0.5) * 15, 0, 25 + (Math.random() - 0.5) * 15);
+                    } else {
+                        npc.target.set((Math.random() - 0.5) * 80, 0, (Math.random() - 0.5) * 80); 
+                    }
+                }
+            } else if (npc.state === 'walking') {
+                const dx = npc.target.x - npc.mesh.position.x; 
+                const dz = npc.target.z - npc.mesh.position.z; 
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                
+                if (dist < 1) { 
+                    npc.state = 'idle'; npc.timer = 100 + Math.random() * 300; 
+                } else { 
+                    npc.mesh.position.x += (dx / dist) * npc.speed; 
+                    npc.mesh.position.z += (dz / dist) * npc.speed; 
+                    npc.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 0.2; 
+                }
+            }
+        });
+    }
+
     createAnimal(type, bounds) {
         const animal = new THREE.Group(); let speed = 0;
         
@@ -860,7 +936,7 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // 7. FLORA E AGRICULTURA
+    // 7. AGRICULTURA
     // ==========================================
     createTree(x, z) {
         for(const obs of this.obstacles) { 
@@ -1023,7 +1099,7 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // 8. INTERAÇÕES E CONTROLES (MOUSE E TRATOR)
+    // 8. INTERAÇÕES (CLICK, TRATOR, NPCS)
     // ==========================================
     setupInteractions() {
         const raycaster = new THREE.Raycaster(); 
@@ -1038,9 +1114,9 @@ class NebulaFarmPro {
             
             if (this.tractor.isDriving) {
                 const hitsGrass = raycaster.intersectObject(this.grass);
-                if (hitsGrass.length > 0) {
-                    this.tractor.target = new THREE.Vector3(hitsGrass[0].point.x, 0, hitsGrass[0].point.z);
-                    this.spawnFX(hitsGrass[0].point.x, e.clientY, "🎯", "#e74c3c");
+                if (hitsGrass.length > 0) { 
+                    this.tractor.target = new THREE.Vector3(hitsGrass[0].point.x, 0, hitsGrass[0].point.z); 
+                    this.spawnFX(e.clientX, e.clientY, "🎯", "#e74c3c"); 
                 }
                 return; 
             }
@@ -1059,13 +1135,28 @@ class NebulaFarmPro {
             this.hasPanned = false; 
             this.pendingBubble = null;
 
+            // SISTEMA DE CONVERSA COM NPCs!
+            const npcMeshes = []; 
+            this.npcs.forEach(n => npcMeshes.push(...n.mesh.children));
+            const hitsNPC = raycaster.intersectObjects(npcMeshes);
+            
+            if (hitsNPC.length > 0) {
+                const npcData = hitsNPC[0].object.userData;
+                const npc = this.npcs.find(n => n.mesh === npcData.parentRef);
+                if (npc) {
+                    const randomPhrase = npc.phrases[Math.floor(Math.random() * npc.phrases.length)];
+                    this.spawnFX(e.clientX, e.clientY - 20, `💬 "${randomPhrase}"`, "#ffffff");
+                }
+                return; // Impede abrir bolhas agrícolas
+            }
+
             if (this.tractor.mesh) {
                 const hitsTractor = raycaster.intersectObjects(this.tractor.mesh.children);
-                if (hitsTractor.length > 0) {
-                    this.tractor.isDriving = true;
-                    document.getElementById('driving-alert').style.display = 'block';
+                if (hitsTractor.length > 0) { 
+                    this.tractor.isDriving = true; 
+                    document.getElementById('driving-alert').style.display = 'block'; 
                     this.isPanning = false; 
-                    return;
+                    return; 
                 }
             }
 
@@ -1324,6 +1415,26 @@ class NebulaFarmPro {
     // ==========================================
     // 9. REGRAS DE NEGÓCIO E MISSÕES
     // ==========================================
+    harvestAnimal(animalGroup, x, y) {
+        const anim = this.animals.find(a => a.mesh === animalGroup);
+        if (!anim || anim.state !== 'ready' || this.state.siloCount + 1 > this.state.maxSilo) return;
+        
+        const prodConf = this.config[anim.product]; 
+        this.state.inventory[anim.product]++; 
+        this.state.siloCount++; 
+        this.state.xp += prodConf.xp;
+        
+        anim.state = 'hungry'; 
+        anim.mesh.position.y = 0; 
+        new TWEEN.Tween(anim.mesh.scale).to({x: 0.9, y: 0.8, z: 0.9}, 300).start();
+        
+        let icon = anim.product === 'egg' ? '🥚' : (anim.product === 'milk' ? '🥛' : '🥓');
+        this.spawnFX(x, y, `+1 ${icon}`, "#FFD700"); 
+        
+        this.checkLevel(); 
+        this.updateUI();
+    }
+
     startFishing(x, y) {
         if (this.isFishing) return; 
         if (this.state.inventory.corn <= 0) { 
@@ -1432,7 +1543,32 @@ class NebulaFarmPro {
         }
     }
 
-    // FUNÇÕES IMPORTANTES DE MERCADO E UPGRADE RECUPERADAS!
+    feedAnimal(animalGroup, x, y) {
+        const anim = this.animals.find(a => a.mesh === animalGroup);
+        if (!anim || anim.state !== 'hungry' || this.state.inventory.feed <= 0) return;
+        
+        this.state.inventory.feed--; 
+        anim.state = 'producing'; 
+        anim.produceTimer = Date.now(); 
+        anim.timer = 0;
+        
+        new TWEEN.Tween(anim.mesh.scale).to({x: 1, y: 1, z: 1}, 300).easing(TWEEN.Easing.Bounce.Out).start();
+        this.spawnFX(x, y, "❤️", "#F44336"); 
+        
+        this.updateBubbleQuantity('feed'); 
+        this.updateUI(); 
+        this.saveToCloud(true);
+    }
+
+    openMarket() { 
+        document.getElementById('market-modal').classList.remove('modal-hidden'); 
+        this.updateUI(); 
+    }
+    
+    closeMarket() { 
+        document.getElementById('market-modal').classList.add('modal-hidden'); 
+    }
+
     craftFeed() {
         if (this.state.inventory.wheat >= 3 && this.state.inventory.corn >= 1) { 
             this.state.inventory.wheat -= 3; 
@@ -1489,15 +1625,6 @@ class NebulaFarmPro {
         } else { 
             alert(`Estoque vazio!`); 
         }
-    }
-
-    openMarket() { 
-        document.getElementById('market-modal').classList.remove('modal-hidden'); 
-        this.updateUI(); 
-    }
-    
-    closeMarket() { 
-        document.getElementById('market-modal').classList.add('modal-hidden'); 
     }
 
     spawnFX(x, y, text, color) {
@@ -1571,6 +1698,7 @@ class NebulaFarmPro {
         
         this.updateAnimals(); 
         this.updatePets();
+        this.updateNPCs(); 
 
         const now = Date.now();
 
@@ -1632,7 +1760,6 @@ class NebulaFarmPro {
                 this.tractor.mesh.position.z += (dz / dist) * 0.3;
                 this.tractor.mesh.rotation.y = Math.atan2(dx, dz);
                 
-                // Trator passa por cima e colhe!
                 for (let i = this.plants.length - 1; i >= 0; i--) {
                     const p = this.plants[i];
                     if (p.progress >= 1 && !this.config[p.type].isTree) {
