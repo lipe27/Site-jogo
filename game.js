@@ -1,6 +1,6 @@
 /**
- * NEBULA FARM PRO - CÓDIGO 100% COMPLETO 🚜♻️🌧️
- * Sem cortes! Celeiro corrigido, Clima, Reciclagem, Missões e Plantações.
+ * NEBULA FARM PRO - CÓDIGO 100% COMPLETO E FORMATADO 🚜♻️🌧️
+ * Fim do mundo resolvido, Dinheiro em $1000, Celeiro e Casa perfeitos.
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -158,7 +158,7 @@ class NebulaFarmPro {
             if (doc.exists) {
                 this.state = { ...this.state, ...doc.data() };
                 
-                // Força o saldo para $1000 caso seja a primeira vez abrindo a versão nova
+                // PEDIDO DO FELIPÃO: Força o saldo para $1000 exatos!
                 this.state.money = 1000;
                 
                 if (this.state.inventory.silage === undefined) this.state.inventory.silage = 0;
@@ -273,7 +273,8 @@ class NebulaFarmPro {
     }
 
     buildWorld() {
-        this.grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x7cb342 }));
+        // GRAMA GIGANTE! Passou de 300 para 3000 metros. O fim do mundo sumiu.
+        this.grass = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x7cb342 }));
         this.grass.rotation.x = -Math.PI / 2; 
         this.grass.receiveShadow = true; 
         this.scene.add(this.grass);
@@ -477,6 +478,95 @@ class NebulaFarmPro {
     // ==========================================
     // 5. CRIAÇÃO DAS FÁBRICAS E ESTRUTURAS
     // ==========================================
+    
+    // A CASA DETALHADA COM CHAMINÉ E JANELAS!
+    createFarmhouse(x, z) {
+        const house = new THREE.Group();
+        
+        const wallsMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 6), wallsMat); 
+        walls.position.y = 2.5; 
+        walls.castShadow = true; 
+        walls.receiveShadow = true;
+        
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xb71c1c, roughness: 0.9 });
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(7, 3.5, 4), roofMat); 
+        roof.position.y = 6.75; 
+        roof.rotation.y = Math.PI / 4; 
+        roof.castShadow = true;
+        
+        const doorMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
+        const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 0.2), doorMat); 
+        door.position.set(0, 1.75, 3.1); 
+        
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8 })); 
+        knob.position.set(0.6, 0, 0.15); 
+        door.add(knob); 
+        
+        const winMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.1, metalness: 0.8 }); 
+        const winBorderMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 }); 
+        
+        const criarJanela = (wx, wy, wz) => {
+            const winGroup = new THREE.Group(); 
+            const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.1), winMat);
+            const bTop = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.2, 0.2), winBorderMat); bTop.position.y = 0.85;
+            const bBot = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.2, 0.2), winBorderMat); bBot.position.y = -0.85;
+            const bL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.2), winBorderMat); bL.position.x = -0.85;
+            const bR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.2), winBorderMat); bR.position.x = 0.85;
+            winGroup.add(glass, bTop, bBot, bL, bR); 
+            winGroup.position.set(wx, wy, wz); 
+            return winGroup;
+        };
+        
+        const janelaEsq = criarJanela(-2.5, 3, 3.1); 
+        const janelaDir = criarJanela(2.5, 3, 3.1);
+        
+        const chimneyMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.9 });
+        const chimney = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4, 1.2), chimneyMat); 
+        chimney.position.set(-2, 6, -1); 
+        chimney.castShadow = true;
+        
+        house.add(walls, roof, door, janelaEsq, janelaDir, chimney); 
+        house.position.set(x, 0, z); 
+        house.rotation.y = -Math.PI / 6; 
+        this.scene.add(house);
+    }
+
+    // CELEIRO COM CORES E TEXTURAS CORRETAS!
+    createBarn(x, z) {
+        if (typeof THREE.GLTFLoader === 'undefined') return;
+        
+        const loader = new THREE.GLTFLoader();
+        loader.load('celeiro.glb', (gltf) => {
+            const barn = gltf.scene; 
+            barn.position.set(x, 0, z); 
+            barn.scale.set(1, 1, 1); 
+            
+            const materialParedeVermelha = new THREE.MeshStandardMaterial({ color: 0xFF0000, roughness: 0.8 }); 
+            const materialTelhadoCinza = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.9 });    
+            const materialMadeiraMarrom = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });    
+            
+            barn.traverse((node) => {
+                if (node.isMesh) {
+                    node.castShadow = true; 
+                    node.receiveShadow = true;
+                    
+                    const nomeDaPeca = node.name.toLowerCase(); 
+                    const nomeDoGrupo = node.parent ? node.parent.name.toLowerCase() : "";
+                    
+                    if (nomeDaPeca.includes('triangle') || nomeDoGrupo.includes('triangle')) {
+                        node.material = materialTelhadoCinza;
+                    } else if (nomeDaPeca.includes('window') || nomeDoGrupo.includes('window') || nomeDaPeca.includes('door') || nomeDoGrupo.includes('door')) {
+                        node.material = materialMadeiraMarrom;
+                    } else {
+                        node.material = materialParedeVermelha; 
+                    }
+                }
+            });
+            this.scene.add(barn);
+        }, undefined, () => {});
+    }
+
     createRecycler(x, z) {
         const recGroup = new THREE.Group();
         const base = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 4), new THREE.MeshStandardMaterial({color: 0x2ecc71})); 
@@ -565,57 +655,6 @@ class NebulaFarmPro {
         }
     }
 
-    createFarmhouse(x, z) {
-        const house = new THREE.Group();
-        const wallsMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-        const walls = new THREE.Mesh(new THREE.BoxGeometry(8, 5, 6), wallsMat); 
-        walls.position.y = 2.5; 
-        walls.castShadow = true; 
-        walls.receiveShadow = true;
-        
-        const roofMat = new THREE.MeshStandardMaterial({ color: 0xb71c1c, roughness: 0.9 });
-        const roof = new THREE.Mesh(new THREE.ConeGeometry(7, 3.5, 4), roofMat); 
-        roof.position.y = 6.75; 
-        roof.rotation.y = Math.PI / 4; 
-        roof.castShadow = true;
-        
-        const doorMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
-        const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 0.2), doorMat); 
-        door.position.set(0, 1.75, 3.1); 
-        
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8 })); 
-        knob.position.set(0.6, 0, 0.15); 
-        door.add(knob); 
-        
-        const winMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.1, metalness: 0.8 }); 
-        const winBorderMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 }); 
-        
-        const criarJanela = (wx, wy, wz) => {
-            const winGroup = new THREE.Group(); 
-            const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.1), winMat);
-            const bTop = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.2, 0.2), winBorderMat); bTop.position.y = 0.85;
-            const bBot = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.2, 0.2), winBorderMat); bBot.position.y = -0.85;
-            const bL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.2), winBorderMat); bL.position.x = -0.85;
-            const bR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.5, 0.2), winBorderMat); bR.position.x = 0.85;
-            winGroup.add(glass, bTop, bBot, bL, bR); 
-            winGroup.position.set(wx, wy, wz); 
-            return winGroup;
-        };
-        
-        const janelaEsq = criarJanela(-2.5, 3, 3.1); 
-        const janelaDir = criarJanela(2.5, 3, 3.1);
-        
-        const chimneyMat = new THREE.MeshStandardMaterial({ color: 0x7f8c8d, roughness: 0.9 });
-        const chimney = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4, 1.2), chimneyMat); 
-        chimney.position.set(-2, 6, -1); 
-        chimney.castShadow = true;
-        
-        house.add(walls, roof, door, janelaEsq, janelaDir, chimney); 
-        house.position.set(x, 0, z); 
-        house.rotation.y = -Math.PI / 6; 
-        this.scene.add(house);
-    }
-
     createLake(x, z) {
         const lakeGroup = new THREE.Group();
         this.lake = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, 0.2, 32), new THREE.MeshStandardMaterial({ color: 0x2980b9, transparent: true, opacity: 0.8 })); 
@@ -683,40 +722,6 @@ class NebulaFarmPro {
         bakeryGroup.children.forEach(c => c.userData = { isFactory: true, parentRef: bakeryGroup, type: 'bakery' }); 
         this.scene.add(bakeryGroup);
         this.factories.push({ mesh: bakeryGroup, type: 'bakery', state: 'idle', timer: 0, duration: 15000 });
-    }
-
-    createBarn(x, z) {
-        if (typeof THREE.GLTFLoader === 'undefined') return;
-        
-        const loader = new THREE.GLTFLoader();
-        loader.load('celeiro.glb', (gltf) => {
-            const barn = gltf.scene; 
-            barn.position.set(x, 0, z); 
-            barn.scale.set(1, 1, 1); 
-            
-            const materialParedeVermelha = new THREE.MeshStandardMaterial({ color: 0xFF0000, roughness: 0.8 }); 
-            const materialTelhadoCinza = new THREE.MeshStandardMaterial({ color: 0x808080, roughness: 0.9 });    
-            const materialMadeiraMarrom = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.7 });    
-            
-            barn.traverse((node) => {
-                if (node.isMesh) {
-                    node.castShadow = true; 
-                    node.receiveShadow = true;
-                    
-                    const nomeDaPeca = node.name.toLowerCase(); 
-                    const nomeDoGrupo = node.parent ? node.parent.name.toLowerCase() : "";
-                    
-                    if (nomeDaPeca.includes('triangle') || nomeDoGrupo.includes('triangle')) {
-                        node.material = materialTelhadoCinza;
-                    } else if (nomeDaPeca.includes('window') || nomeDoGrupo.includes('window') || nomeDaPeca.includes('door') || nomeDoGrupo.includes('door')) {
-                        node.material = materialMadeiraMarrom;
-                    } else {
-                        node.material = materialParedeVermelha; 
-                    }
-                }
-            });
-            this.scene.add(barn);
-        }, undefined, () => {});
     }
 
     buildEnclosureOld(type, x, z) {
@@ -855,7 +860,7 @@ class NebulaFarmPro {
     }
 
     // ==========================================
-    // 7. FLORA E AGRICULTURA (AGORA COMPLETO)
+    // 7. FLORA E AGRICULTURA
     // ==========================================
     createTree(x, z) {
         for(const obs of this.obstacles) { 
@@ -932,7 +937,6 @@ class NebulaFarmPro {
         this.plants.push({ mesh: mesh, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
     }
 
-    // NOVAS FUNÇÕES AGRÍCOLAS RECUPERADAS
     plant(tile, seedType) {
         if (tile.userData.occupied || this.state.inventory[seedType] <= 0) return;
         this.state.inventory[seedType]--; 
@@ -1317,38 +1321,9 @@ class NebulaFarmPro {
         }
     }
 
-    updateBubbleQuantity(tool) {
-        const bubbleItem = document.querySelector(`.bubble-item[data-tool="${tool}"] small`);
-        if (bubbleItem) { 
-            const qty = this.state.inventory[tool]; 
-            bubbleItem.innerText = qty; 
-            if(qty <= 0) bubbleItem.parentElement.classList.add('locked'); 
-        }
-    }
-
     // ==========================================
     // 9. REGRAS DE NEGÓCIO E MISSÕES
     // ==========================================
-    harvestAnimal(animalGroup, x, y) {
-        const anim = this.animals.find(a => a.mesh === animalGroup);
-        if (!anim || anim.state !== 'ready' || this.state.siloCount + 1 > this.state.maxSilo) return;
-        
-        const prodConf = this.config[anim.product]; 
-        this.state.inventory[anim.product]++; 
-        this.state.siloCount++; 
-        this.state.xp += prodConf.xp;
-        
-        anim.state = 'hungry'; 
-        anim.mesh.position.y = 0; 
-        new TWEEN.Tween(anim.mesh.scale).to({x: 0.9, y: 0.8, z: 0.9}, 300).start();
-        
-        let icon = anim.product === 'egg' ? '🥚' : (anim.product === 'milk' ? '🥛' : '🥓');
-        this.spawnFX(x, y, `+1 ${icon}`, "#FFD700"); 
-        
-        this.checkLevel(); 
-        this.updateUI();
-    }
-
     startFishing(x, y) {
         if (this.isFishing) return; 
         if (this.state.inventory.corn <= 0) { 
@@ -1457,33 +1432,7 @@ class NebulaFarmPro {
         }
     }
 
-    feedAnimal(animalGroup, x, y) {
-        const anim = this.animals.find(a => a.mesh === animalGroup);
-        if (!anim || anim.state !== 'hungry' || this.state.inventory.feed <= 0) return;
-        
-        this.state.inventory.feed--; 
-        anim.state = 'producing'; 
-        anim.produceTimer = Date.now(); 
-        anim.timer = 0;
-        
-        new TWEEN.Tween(anim.mesh.scale).to({x: 1, y: 1, z: 1}, 300).easing(TWEEN.Easing.Bounce.Out).start();
-        this.spawnFX(x, y, "❤️", "#F44336"); 
-        
-        this.updateBubbleQuantity('feed'); 
-        this.updateUI(); 
-        this.saveToCloud(true);
-    }
-
-    openMarket() { 
-        document.getElementById('market-modal').classList.remove('modal-hidden'); 
-        this.updateUI(); 
-    }
-    
-    closeMarket() { 
-        document.getElementById('market-modal').classList.add('modal-hidden'); 
-    }
-
-    // FUNÇÕES RECUPERADAS PARA ATUALIZAR TERRENO E COMPRAR ITENS 
+    // FUNÇÕES IMPORTANTES DE MERCADO E UPGRADE RECUPERADAS!
     craftFeed() {
         if (this.state.inventory.wheat >= 3 && this.state.inventory.corn >= 1) { 
             this.state.inventory.wheat -= 3; 
@@ -1540,6 +1489,15 @@ class NebulaFarmPro {
         } else { 
             alert(`Estoque vazio!`); 
         }
+    }
+
+    openMarket() { 
+        document.getElementById('market-modal').classList.remove('modal-hidden'); 
+        this.updateUI(); 
+    }
+    
+    closeMarket() { 
+        document.getElementById('market-modal').classList.add('modal-hidden'); 
     }
 
     spawnFX(x, y, text, color) {
