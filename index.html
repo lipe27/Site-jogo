@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nebula Farm | O Jogo Definitivo</title>
+    <title>Nebula Farm | Economia Completa</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 </head>
@@ -82,6 +82,10 @@
                         <button class="market-item" onclick="gameInstance.sellItem('wheat')"><span class="mkt-name">🌾 Trigo</span><span class="mkt-qty">Estoque: <span id="mkt-qty-wheat">0</span></span><span class="mkt-price">$2</span></button>
                         <button class="market-item" onclick="gameInstance.sellItem('carrot')"><span class="mkt-name">🥕 Cenoura</span><span class="mkt-qty">Estoque: <span id="mkt-qty-carrot">0</span></span><span class="mkt-price">$5</span></button>
                         <button class="market-item" onclick="gameInstance.sellItem('corn')"><span class="mkt-name">🌽 Milho</span><span class="mkt-qty">Estoque: <span id="mkt-qty-corn">0</span></span><span class="mkt-price">$12</span></button>
+                        
+                        <button class="market-item" onclick="gameInstance.sellItem('apple')"><span class="mkt-name">🍎 Maçã</span><span class="mkt-qty">Estoque: <span id="mkt-qty-apple">0</span></span><span class="mkt-price">$10</span></button>
+                        <button class="market-item" onclick="gameInstance.sellItem('orange')"><span class="mkt-name">🍊 Laranja</span><span class="mkt-qty">Estoque: <span id="mkt-qty-orange">0</span></span><span class="mkt-price">$16</span></button>
+
                         <button class="market-item" onclick="gameInstance.sellItem('egg')"><span class="mkt-name">🥚 Ovo</span><span class="mkt-qty">Estoque: <span id="mkt-qty-egg">0</span></span><span class="mkt-price">$8</span></button>
                         <button class="market-item" onclick="gameInstance.sellItem('milk')"><span class="mkt-name">🥛 Leite</span><span class="mkt-qty">Estoque: <span id="mkt-qty-milk">0</span></span><span class="mkt-price">$15</span></button>
                         <button class="market-item" onclick="gameInstance.sellItem('bacon')"><span class="mkt-name">🥓 Bacon</span><span class="mkt-qty">Estoque: <span id="mkt-qty-bacon">0</span></span><span class="mkt-price">$20</span></button>
@@ -90,6 +94,15 @@
                         <button class="market-item" style="border-color:#2980b9;" onclick="gameInstance.sellItem('fish')"><span class="mkt-name">🐟 Peixe</span><span class="mkt-qty">Estoque: <span id="mkt-qty-fish">0</span></span><span class="mkt-price">$25</span></button>
                         <button class="market-item" style="border-color:#689f38;" onclick="gameInstance.sellItem('silage')"><span class="mkt-name">🚜 Silagem</span><span class="mkt-qty">Estoque: <span id="mkt-qty-silage">0</span></span><span class="mkt-price">$50</span></button>
                         <button class="market-item" style="border-color:#8e44ad;" onclick="gameInstance.sellItem('fertilizer')"><span class="mkt-name">🧪 Adubo</span><span class="mkt-qty">Estoque: <span id="mkt-qty-fertilizer">0</span></span><span class="mkt-price">$30</span></button>
+                    </div>
+                </div>
+
+                <div class="market-section">
+                    <h3>🥣 Alimentação Animal</h3>
+                    <div class="sell-grid">
+                        <button class="market-item upgrade" onclick="gameInstance.craftFeed()"><span class="mkt-name">Fabricar Ração</span><span class="mkt-qty" style="color: #e67e22;">Custa: 3🌾 e 1🌽</span></button>
+                        <button class="market-item buy-seed" onclick="gameInstance.buyFeed(5, 20)"><span class="mkt-name">Comprar 5x Ração</span><span class="mkt-price">$20</span></button>
+                        <div class="market-item" style="cursor: default; border-color: #bdc3c7;"><span class="mkt-name">Estoque Atual</span><span class="mkt-price" id="mkt-qty-feed" style="color: #5d4037;">0</span></div>
                     </div>
                 </div>
 
