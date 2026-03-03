@@ -1,13 +1,13 @@
 /**
- * NEBULA FARM PRO - 100% BLINDADO E CORRIGIDO 🚜
+ * NEBULA FARM PRO - VERSÃO DEFINITIVA BLINDADA 🚜
  * - Câmera bloqueada (Sem Fim do Mundo)
  * - Pescador Tião preso no Píer
  * - Animais e Plantas Voxel (Minecraft)
- * - Crash do 'createBird' corrigido
+ * - Crash do Loading corrigido
  */
 
 window.onerror = function(message, source, lineno) { 
-    console.error(`ERRO: ${message} (Linha: ${lineno})`); 
+    console.error(`ERRO CRÍTICO: ${message} (Linha: ${lineno})`); 
     return false; 
 };
 
@@ -74,6 +74,8 @@ class NebulaFarmPro {
     initCloud() {
         if (!db || !this.currentUser) return this.startGame();
         let hasStarted = false;
+        
+        // Timeout de Segurança
         const safetyTimeout = setTimeout(() => { if(!hasStarted) { hasStarted = true; this.startGame(); } }, 5000);
         
         db.collection("fazendas").doc(this.currentUser.uid).get().then((doc) => {
@@ -109,7 +111,7 @@ class NebulaFarmPro {
             this.updateUI();
             setInterval(() => { this.saveToCloud(true); }, 30000);
             requestAnimationFrame((time) => this.animate(time));
-        } catch (err) { console.error("Erro Crítico:", err); }
+        } catch (err) { console.error("Erro Crítico ao Montar:", err); }
     }
 
     setupCore() {
@@ -123,8 +125,10 @@ class NebulaFarmPro {
     }
 
     setupLights() {
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55); this.scene.add(this.ambientLight);
-        this.sun = new THREE.DirectionalLight(0xffffff, 1.3); this.sun.position.set(40, 60, 20); this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048); this.scene.add(this.sun);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+        this.scene.add(this.ambientLight);
+        this.sun = new THREE.DirectionalLight(0xffffff, 1.0); 
+        this.sun.position.set(40, 60, 20); this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048); this.scene.add(this.sun);
         this.houseLight = new THREE.PointLight(0xffaa00, 0, 30); this.houseLight.position.set(22, 6, -10); this.scene.add(this.houseLight);
     }
 
@@ -137,7 +141,6 @@ class NebulaFarmPro {
     }
 
     buildWorld() {
-        // Grama expandida
         this.grass = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshStandardMaterial({ color: 0x7cb342 }));
         this.grass.rotation.x = -Math.PI / 2; this.grass.receiveShadow = true; this.scene.add(this.grass);
         this.obstacles.push({ x: -22, z: -15, r: 8 }, { x: 22, z: -10, r: 8 }, { x: 35, z: 25, r: 14 }, { x: 0, z: 0, r: 12 }, { x: -22, z: 10, r: 6 });  
@@ -165,14 +168,9 @@ class NebulaFarmPro {
 
         for (let i=0; i<45; i++) { this.createTree((Math.random()-0.5)*200, (Math.random()-0.5)*200); }
         this.createPet('dog', 15, -5); this.createPet('cat', 18, -12);
-        
-        // Pássaros Restaurados
         for (let i=0; i<5; i++) { this.createBird(); }
     }
 
-    // ==========================================
-    // 4. MODO ARQUITETO E DECORAÇÕES
-    // ==========================================
     buyBuilding(type, cost) {
         if (this.state.money < cost) { alert("Dinheiro Insuficiente!"); return; }
         if (type !== 'path' && type !== 'fence') { if (this.state.enclosures[type] && this.state.enclosures[type].built) { alert("Já possui esta construção!"); return; } }
@@ -356,9 +354,6 @@ class NebulaFarmPro {
         this.scene.add(f1, f2, f3, f4);
     }
 
-    // ==========================================
-    // 6. VIDA (NPCs, ANIMAIS VOXEL, Pescador Seco)
-    // ==========================================
     createNPC(name, x, z, color, phrases) {
         const npcGroup = new THREE.Group();
         const skinMat = new THREE.MeshStandardMaterial({color: 0xffccaa, roughness: 0.8});
@@ -390,10 +385,8 @@ class NebulaFarmPro {
                 if (npc.timer <= 0) { 
                     npc.state = 'walking'; 
                     if (npc.name.includes("Pescador")) {
-                        // TIÃO NÃO SAI DA MADEIRA (PÍER)
                         npc.target.set(24 + (Math.random() - 0.5) * 2, 0, 25 + (Math.random() - 0.5) * 4);
                     } else {
-                        // OUTROS DESVIAM DA ÁGUA
                         let safeTarget = false; let rx, rz;
                         while (!safeTarget) {
                             rx = (Math.random() - 0.5) * 80; rz = (Math.random() - 0.5) * 80;
@@ -416,10 +409,8 @@ class NebulaFarmPro {
         });
     }
 
-    // ANIMAIS VOXEL (COM CARA DE MINECRAFT)
     createAnimal(type, bounds) {
         const animal = new THREE.Group(); let speed = 0;
-        
         if (type === 'pig') { 
             const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.8), new THREE.MeshStandardMaterial({ color: 0xf8bbd0 })); body.position.y = 0.5;
             const snout = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.2), new THREE.MeshStandardMaterial({ color: 0xd81b60 })); snout.position.set(0, 0, 0.95); body.add(snout);
@@ -439,7 +430,6 @@ class NebulaFarmPro {
             const snout = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.3), new THREE.MeshStandardMaterial({ color: 0xffb6c1 })); snout.position.set(0, -0.2, 0.5); head.add(snout);
             body.add(head); animal.add(body); speed = 0.02; 
         }
-        
         const startX = bounds.x + (Math.random() - 0.5) * (bounds.w - 2); const startZ = bounds.z + (Math.random() - 0.5) * (bounds.d - 2);
         animal.position.set(startX, 0, startZ); animal.children.forEach(c => { c.userData = { isAnimal: true, parentRef: animal }; }); this.scene.add(animal);
         this.animals.push({ mesh: animal, bounds: bounds, type: type, speed: speed, target: new THREE.Vector3(startX, 0, startZ), state: 'hungry', timer: 0, product: this.animalConfig[type].product, produceTime: this.animalConfig[type].time, produceTimer: null });
@@ -465,8 +455,26 @@ class NebulaFarmPro {
 
     createPet(type, startX, startZ) {
         const pet = new THREE.Group(); let speed = 0.06;
-        if (type === 'dog') { const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, 2), new THREE.MeshStandardMaterial({ color: 0xd35400 })); body.position.y = 0.7; pet.add(body); } 
-        else if (type === 'cat') { const body = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 1.5), new THREE.MeshStandardMaterial({ color: 0x7f8c8d })); body.position.y = 0.5; pet.add(body); speed = 0.07; }
+        if (type === 'dog') { 
+            const matBody = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); const matSnout = new THREE.MeshStandardMaterial({ color: 0x5D4037 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.8, 1.6), matBody); body.position.y = 0.6;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), matBody); head.position.set(0, 0.4, 1.0);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.3), matSnout); snout.position.set(0, 0, 0.55); head.add(snout);
+            body.add(head);
+            const legGeo = new THREE.BoxGeometry(0.3, 0.6, 0.3);
+            const l1 = new THREE.Mesh(legGeo, matBody); l1.position.set(0.4, -0.4, 0.6); const l2 = new THREE.Mesh(legGeo, matBody); l2.position.set(-0.4, -0.4, 0.6);
+            const l3 = new THREE.Mesh(legGeo, matBody); l3.position.set(0.4, -0.4, -0.6); const l4 = new THREE.Mesh(legGeo, matBody); l4.position.set(-0.4, -0.4, -0.6);
+            body.add(l1, l2, l3, l4); pet.add(body);
+        } else if (type === 'cat') { 
+            const matBody = new THREE.MeshStandardMaterial({ color: 0x95a5a6 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.6, 1.2), matBody); body.position.y = 0.4;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.5), matBody); head.position.set(0, 0.3, 0.7);
+            const ear1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), matBody); ear1.position.set(0.2, 0.35, 0);
+            const ear2 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), matBody); ear2.position.set(-0.2, 0.35, 0);
+            head.add(ear1, ear2); body.add(head);
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.8), matBody); tail.position.set(0, 0.2, -0.7); tail.rotation.x = Math.PI / 6; body.add(tail);
+            pet.add(body); speed = 0.07; 
+        }
         pet.position.set(startX, 0, startZ); pet.castShadow = true; this.scene.add(pet);
         this.pets.push({ mesh: pet, type: type, speed: speed, target: new THREE.Vector3(startX, 0, startZ), state: 'idle', timer: Math.random() * 100 });
     }
@@ -488,9 +496,6 @@ class NebulaFarmPro {
         });
     }
 
-    // ==========================================
-    // 7. AGRICULTURA VOXEL E PÁSSAROS
-    // ==========================================
     createBird() {
         const bird = new THREE.Group();
         const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x2980b9})); bird.add(body);
@@ -515,18 +520,10 @@ class NebulaFarmPro {
     plant(tile, seedType) {
         if (tile.userData.occupied || this.state.inventory[seedType] <= 0) return;
         this.state.inventory[seedType]--; tile.userData.occupied = true;
-        
         const stalk = new THREE.Group();
-        if (seedType === 'wheat') {
-            const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0);
-            const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2);
-        } else if (seedType === 'carrot') {
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25;
-            const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top);
-        } else if (seedType === 'corn') {
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6;
-            const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob);
-        }
+        if (seedType === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
+        else if (seedType === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
+        else if (seedType === 'corn') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
         stalk.position.set(tile.position.x, 0.4, tile.position.z); this.scene.add(stalk);
         this.plants.push({ mesh: stalk, tile, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
     }
@@ -535,8 +532,7 @@ class NebulaFarmPro {
         let targetTile = null; let minDist = Infinity;
         this.tiles.forEach(t => { if(!t.userData.occupied) { let dist = Math.sqrt(Math.pow(t.position.x - sp.x, 2) + Math.pow(t.position.z - sp.z, 2)); if (dist < minDist) { minDist = dist; targetTile = t; } } });
         if (targetTile) { 
-            targetTile.userData.occupied = true;
-            const stalk = new THREE.Group();
+            targetTile.userData.occupied = true; const stalk = new THREE.Group();
             if (sp.type === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
             else if (sp.type === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
             else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
@@ -551,18 +547,14 @@ class NebulaFarmPro {
         if (hasCollision) { this.spawnFX(window.innerWidth / 2, window.innerHeight / 2, "❌ LOCAL INVÁLIDO!", "#F44336"); return; }
         if (this.state.inventory[seedType] <= 0) return;
         this.state.inventory[seedType]--; const conf = this.config[seedType];
-        
-        const mesh = new THREE.Group(); 
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
+        const mesh = new THREE.Group(); const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
         const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
         mesh.add(trunk, leaves); mesh.position.set(point.x, 0, point.z); this.scene.add(mesh);
-        
         this.plants.push({ mesh: mesh, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
     }
 
     restoreTree(sp) {
-        const conf = this.config[sp.type]; 
-        const mesh = new THREE.Group(); 
+        const conf = this.config[sp.type]; const mesh = new THREE.Group(); 
         const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
         const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
         mesh.add(trunk, leaves); mesh.position.set(sp.x, 0, sp.z); this.scene.add(mesh);
@@ -575,45 +567,33 @@ class NebulaFarmPro {
         const p = this.plants[idx]; if (p.progress < 1) return;
         const conf = this.config[p.type]; 
         if (this.state.siloCount + conf.yield > this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
-        
         this.state.inventory[p.type] += conf.yield; this.state.siloCount += conf.yield; this.state.xp += conf.xp;
         if (conf.isTree) { p.progress = 0; p.plantedAt = Date.now(); p.mesh.children[1].material.color.setHex(conf.leafColor); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); } 
         else { p.tile.userData.occupied = false; if(typeof TWEEN !== 'undefined') new TWEEN.Tween(p.mesh.scale).to({x:0,y:0,z:0}, 200).onComplete(()=>this.scene.remove(p.mesh)).start(); else this.scene.remove(p.mesh); this.plants.splice(idx, 1); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); }
         this.checkLevel(); this.updateUI(); this.saveToCloud(true);
     }
 
-    // ==========================================
-    // 8. INTERAÇÕES E CÂMERA BLINDADA
-    // ==========================================
     setupInteractions() {
         const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
-        
         window.addEventListener('pointerdown', (e) => {
             if (e.target.closest('#game-ui') || e.target.closest('#market-modal') || e.target.closest('#login-modal') || e.target.closest('.bubble-item') || e.target.closest('#mission-modal')) return;
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; raycaster.setFromCamera(mouse, this.camera);
-            
             if (this.tractor.isDriving) { const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) { this.tractor.target = new THREE.Vector3(hitsGrass[0].point.x, 0, hitsGrass[0].point.z); this.spawnFX(e.clientX, e.clientY, "🎯", "#e74c3c"); } return; }
             if (this.placementMode) { const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) this.validatePlacementPosition(hitsGrass[0].point.x, hitsGrass[0].point.z); return; }
-            
             const bubble = document.getElementById('bubble-menu'); if (bubble && bubble.style.display === 'flex') this.hideBubble();
             this.isPanning = true; this.panStart = { x: e.clientX, y: e.clientY }; this.hasPanned = false; this.pendingBubble = null;
 
             const npcMeshes = []; this.npcs.forEach(n => npcMeshes.push(...n.mesh.children));
             const hitsNPC = raycaster.intersectObjects(npcMeshes);
             if (hitsNPC.length > 0) { const npcData = hitsNPC[0].object.userData; const npc = this.npcs.find(n => n.mesh === npcData.parentRef); if (npc) { const randomPhrase = npc.phrases[Math.floor(Math.random() * npc.phrases.length)]; this.spawnFX(e.clientX, e.clientY - 30, `💬 "${randomPhrase}"`, "#ffffff"); } return; }
-
             if (this.tractor.mesh) { const hitsTractor = raycaster.intersectObjects(this.tractor.mesh.children); if (hitsTractor.length > 0) { this.tractor.isDriving = true; document.getElementById('driving-alert').style.display = 'block'; this.isPanning = false; return; } }
-
             const factoryMeshes = []; this.factories.forEach(f => factoryMeshes.push(...f.mesh.children));
             const hitsF = raycaster.intersectObjects(factoryMeshes);
             if (hitsF.length > 0) { const fac = this.factories.find(f => f.mesh === hitsF[0].object.userData.parentRef); if (fac && fac.state === 'idle') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: fac.type + '_idle' }; else if (fac && fac.state === 'ready') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: fac.type + '_ready' }; return; }
-
             const plantMeshes = this.plants.filter(p => p.progress >= 1).flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
             if (raycaster.intersectObjects(plantMeshes).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant' }; return; }
-
             const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
             if (raycaster.intersectObjects(animalMeshes).length > 0) { const anim = this.animals.find(a => a.mesh === raycaster.intersectObjects(animalMeshes)[0].object.userData.parentRef); if (anim.state === 'hungry') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'feed_animal' }; else if (anim.state === 'ready') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_animal' }; return; }
-
             if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return; }
             const hitsTiles = raycaster.intersectObjects(this.tiles); if (hitsTiles.length > 0 && !hitsTiles[0].object.userData.occupied) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop' }; return; }
             const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree' }; return; }
@@ -627,16 +607,11 @@ class NebulaFarmPro {
                 if (Math.abs(moveX) > 4 || Math.abs(moveY) > 4) {
                     this.hasPanned = true; this.pendingBubble = null; const f = 0.08; 
                     let newX = this.camera.position.x - (moveX * f) - (moveY * f); let newZ = this.camera.position.z + (moveX * f) - (moveY * f);
-                    
-                    // TRAVA ABSOLUTA: IMPEDE CHEGAR NO CÉU AZUL (-60 e 100)
-                    this.camera.position.x = Math.max(-60, Math.min(100, newX)); 
-                    this.camera.position.z = Math.max(-60, Math.min(100, newZ));
-                    
+                    this.camera.position.x = Math.max(-60, Math.min(100, newX)); this.camera.position.z = Math.max(-60, Math.min(100, newZ));
                     this.panStart = { x: e.clientX, y: e.clientY };
                 }
             }
         });
-
         window.addEventListener('pointerup', () => { if (this.placementMode) return; this.isPanning = false; if (this.activeDragTool) { this.isDragging = false; this.activeDragTool = null; this.hideBubble(); } else if (!this.hasPanned && this.pendingBubble) { this.showBubble(this.pendingBubble.x, this.pendingBubble.y, this.pendingBubble.ctx); } });
         window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.tractor.isDriving) { this.tractor.isDriving = false; document.getElementById('driving-alert').style.display = 'none'; } });
     }
@@ -644,42 +619,19 @@ class NebulaFarmPro {
     showBubble(x, y, context) {
         const bubble = document.getElementById('bubble-menu'); if (!bubble) return;
         bubble.style.left = x + 'px'; bubble.style.top = y + 'px'; bubble.style.display = 'flex'; bubble.innerHTML = '';
-
-        if (context === 'plant_crop') {
-            if(this.state.unlocked.wheat) bubble.innerHTML += this.createBubbleItem('wheat', '🌾', this.state.inventory.wheat);
-            if(this.state.unlocked.carrot) bubble.innerHTML += this.createBubbleItem('carrot', '🥕', this.state.inventory.carrot);
-            if(this.state.unlocked.corn) bubble.innerHTML += this.createBubbleItem('corn', '🌽', this.state.inventory.corn);
-        } else if (context === 'plant_tree') {
-            if(this.state.unlocked.apple) bubble.innerHTML += this.createBubbleItem('apple', '🌳', this.state.inventory.apple);
-            if(this.state.unlocked.orange) bubble.innerHTML += this.createBubbleItem('orange', '🍊', this.state.inventory.orange);
-        } else if (context === 'harvest_plant' || context === 'harvest_animal') {
-            bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR');
-        } else if (context === 'feed_animal') {
-            bubble.innerHTML += this.createBubbleItem('feed', '🥣', this.state.inventory.feed);
-        } else if (context === 'fish') {
-            bubble.innerHTML += this.createBubbleItem('fish', '🎣', '1🌽');
-        } else if (context === 'bakery_idle') {
-            const canBake = this.state.inventory.wheat >= 3 ? this.state.inventory.wheat : 0; 
-            bubble.innerHTML += this.createBubbleItem('bake_bread', '🌾', '-3🌾', canBake === 0);
-        } else if (context === 'bakery_ready') {
-            bubble.innerHTML += this.createBubbleItem('collect_bread', '🍞', 'PEGAR');
-        } else if (context === 'dairy_idle') {
-            const canMakeCheese = this.state.inventory.milk >= 2 ? this.state.inventory.milk : 0; 
-            bubble.innerHTML += this.createBubbleItem('make_cheese', '🥛', '-2🥛', canMakeCheese === 0);
-        } else if (context === 'dairy_ready') {
-            bubble.innerHTML += this.createBubbleItem('collect_cheese', '🧀', 'PEGAR');
-        } else if (context === 'trench_idle') {
-            const canMakeSilage = this.state.inventory.corn >= 2 ? this.state.inventory.corn : 0;
-            bubble.innerHTML += this.createBubbleItem('make_silage', '🌽', '-2🌽', canMakeSilage === 0);
-        } else if (context === 'trench_ready') {
-            bubble.innerHTML += this.createBubbleItem('collect_silage', '🚜', 'PEGAR');
-        } else if (context === 'recycler_idle') {
-            const canRecycle = this.state.inventory.junk >= 2 ? this.state.inventory.junk : 0;
-            bubble.innerHTML += this.createBubbleItem('recycle', '🥾', '-2 Lixo', canRecycle === 0);
-        } else if (context === 'recycler_ready') {
-            bubble.innerHTML += this.createBubbleItem('collect_fertilizer', '🧪', 'PEGAR');
-        }
-
+        if (context === 'plant_crop') { if(this.state.unlocked.wheat) bubble.innerHTML += this.createBubbleItem('wheat', '🌾', this.state.inventory.wheat); if(this.state.unlocked.carrot) bubble.innerHTML += this.createBubbleItem('carrot', '🥕', this.state.inventory.carrot); if(this.state.unlocked.corn) bubble.innerHTML += this.createBubbleItem('corn', '🌽', this.state.inventory.corn); } 
+        else if (context === 'plant_tree') { if(this.state.unlocked.apple) bubble.innerHTML += this.createBubbleItem('apple', '🌳', this.state.inventory.apple); if(this.state.unlocked.orange) bubble.innerHTML += this.createBubbleItem('orange', '🍊', this.state.inventory.orange); } 
+        else if (context === 'harvest_plant' || context === 'harvest_animal') { bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR'); } 
+        else if (context === 'feed_animal') { bubble.innerHTML += this.createBubbleItem('feed', '🥣', this.state.inventory.feed); } 
+        else if (context === 'fish') { bubble.innerHTML += this.createBubbleItem('fish', '🎣', '1🌽'); } 
+        else if (context === 'bakery_idle') { const canBake = this.state.inventory.wheat >= 3 ? this.state.inventory.wheat : 0; bubble.innerHTML += this.createBubbleItem('bake_bread', '🌾', '-3🌾', canBake === 0); } 
+        else if (context === 'bakery_ready') { bubble.innerHTML += this.createBubbleItem('collect_bread', '🍞', 'PEGAR'); } 
+        else if (context === 'dairy_idle') { const canMakeCheese = this.state.inventory.milk >= 2 ? this.state.inventory.milk : 0; bubble.innerHTML += this.createBubbleItem('make_cheese', '🥛', '-2🥛', canMakeCheese === 0); } 
+        else if (context === 'dairy_ready') { bubble.innerHTML += this.createBubbleItem('collect_cheese', '🧀', 'PEGAR'); } 
+        else if (context === 'trench_idle') { const canMakeSilage = this.state.inventory.corn >= 2 ? this.state.inventory.corn : 0; bubble.innerHTML += this.createBubbleItem('make_silage', '🌽', '-2🌽', canMakeSilage === 0); } 
+        else if (context === 'trench_ready') { bubble.innerHTML += this.createBubbleItem('collect_silage', '🚜', 'PEGAR'); } 
+        else if (context === 'recycler_idle') { const canRecycle = this.state.inventory.junk >= 2 ? this.state.inventory.junk : 0; bubble.innerHTML += this.createBubbleItem('recycle', '🥾', '-2 Lixo', canRecycle === 0); } 
+        else if (context === 'recycler_ready') { bubble.innerHTML += this.createBubbleItem('collect_fertilizer', '🧪', 'PEGAR'); }
         document.querySelectorAll('.bubble-item').forEach(item => { if (!item.classList.contains('locked')) { item.addEventListener('pointerdown', (e) => { e.preventDefault(); this.activeDragTool = e.currentTarget.dataset.tool; this.isDragging = true; e.stopPropagation(); }); } });
     }
 
@@ -735,11 +687,6 @@ class NebulaFarmPro {
         }
     }
 
-    updateBubbleQuantity(tool) { const bubbleItem = document.querySelector(`.bubble-item[data-tool="${tool}"] small`); if (bubbleItem) { const qty = this.state.inventory[tool]; bubbleItem.innerText = qty; if(qty <= 0) bubbleItem.parentElement.classList.add('locked'); } }
-
-    // ==========================================
-    // 9. REGRAS DE NEGÓCIO E MISSÕES
-    // ==========================================
     harvestAnimal(animalGroup, x, y) {
         const anim = this.animals.find(a => a.mesh === animalGroup);
         if (!anim || anim.state !== 'ready' || this.state.siloCount + 1 > this.state.maxSilo) return;
@@ -800,9 +747,6 @@ class NebulaFarmPro {
     sellItem(type) { if (this.state.inventory[type] > 0) { this.state.inventory[type]--; this.state.siloCount--; this.state.money += this.config[type].sellPrice; this.spawnFX(window.innerWidth/2, 200, `+ $${this.config[type].sellPrice}`, "#FFD700"); this.updateUI(); this.saveToCloud(true); } else { alert(`Estoque vazio!`); } }
     spawnFX(x, y, text, color) { const el = document.createElement('div'); el.className = 'floating-feedback'; el.innerText = text; el.style.color = color; el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
 
-    // ==========================================
-    // 10. INTERFACE E RENDERIZAÇÃO
-    // ==========================================
     updateUI() {
         const setTxt = (id, text) => { try { const el = document.getElementById(id); if (el) el.innerText = text; } catch(e) {} };
         setTxt('money', this.state.money); setTxt('silo-text', `${this.state.siloCount}/${this.state.maxSilo}`); setTxt('lvl', this.state.lvl);
@@ -823,11 +767,9 @@ class NebulaFarmPro {
         requestAnimationFrame((t) => this.animate(t));
         if (typeof TWEEN !== 'undefined' && time) TWEEN.update(time);
         this.animations.forEach(fn => fn()); 
-        
         this.updateAnimals(); this.updatePets(); this.updateNPCs(); 
         const now = Date.now();
 
-        // === CLIMA ===
         if (now - this.weather.timer > 60000) { 
             this.weather.timer = now; this.weather.isRaining = Math.random() > 0.7; 
             const ind = document.getElementById('weather-indicator');
@@ -840,21 +782,19 @@ class NebulaFarmPro {
             this.rainParticles.geometry.attributes.position.needsUpdate = true;
         }
 
-        // === DIA E NOITE ===
         if (!this.weather.isRaining) this.timeOfDay += 0.0005; 
         const sunHeight = this.weather.isRaining ? 0.2 : Math.sin(this.timeOfDay);
         this.sun.position.y = sunHeight * 60; this.sun.position.x = Math.cos(this.timeOfDay) * 60;
 
         if (sunHeight > 0 && !this.weather.isRaining) {
             this.scene.background.lerp(new THREE.Color(0x87CEEB), 0.05); this.scene.fog.color.lerp(new THREE.Color(0x87CEEB), 0.05);
-            this.sun.intensity = sunHeight * 1.3; this.ambientLight.intensity = 0.55; this.houseLight.intensity = 0; 
+            this.sun.intensity = sunHeight * 1.0; this.ambientLight.intensity = 0.4; this.houseLight.intensity = 0; 
         } else {
             const darkColor = this.weather.isRaining ? 0x5a6e7f : 0x0B1D3A; 
             this.scene.background.lerp(new THREE.Color(darkColor), 0.05); this.scene.fog.color.lerp(new THREE.Color(darkColor), 0.05);
             this.sun.intensity = 0; this.ambientLight.intensity = 0.3; this.houseLight.intensity = 2; 
         }
 
-        // === TRATOR ===
         if (this.tractor.isDriving && this.tractor.mesh && this.tractor.target) {
             this.camera.position.x += (this.tractor.mesh.position.x + 50 - this.camera.position.x) * 0.05;
             this.camera.position.z += (this.tractor.mesh.position.z + 50 - this.camera.position.z) * 0.05;
@@ -878,7 +818,6 @@ class NebulaFarmPro {
             }
         }
 
-        // === CONSTRUÇÕES E FÁBRICAS ===
         for (let i = this.constructions.length - 1; i >= 0; i--) {
             const c = this.constructions[i];
             if (now - c.timer > c.duration) { this.finishConstruction(c); this.constructions.splice(i, 1); } else { c.mesh.rotation.y = Math.sin(now * 0.01) * 0.05; }
@@ -888,24 +827,14 @@ class NebulaFarmPro {
             if (f.state === 'baking') {
                 if (now - f.timer > f.duration) {
                     f.state = 'ready';
-                    if (f.type === 'bakery') {
-                        f.holeMesh.material.color.setHex(0x111111); const breadMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1), new THREE.MeshStandardMaterial({color: 0xe67e22}));
-                        breadMesh.position.set(0, 6, 0); breadMesh.name = "product_ready"; f.mesh.add(breadMesh);
-                    } else if (f.type === 'dairy') {
-                        const cheeseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16), new THREE.MeshStandardMaterial({color: 0xf1c40f}));
-                        cheeseMesh.position.set(0, 6, 0); cheeseMesh.name = "product_ready"; f.mesh.add(cheeseMesh);
-                    } else if (f.type === 'trench') {
-                        const silageMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 1.2, 3), new THREE.MeshStandardMaterial({color: 0x689f38}));
-                        silageMesh.position.set(0, 0.8, 0); silageMesh.name = "product_ready"; f.mesh.add(silageMesh);
-                    } else if (f.type === 'recycler') {
-                        const fertMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8), new THREE.MeshStandardMaterial({color: 0x2ecc71}));
-                        fertMesh.position.set(0, 6, 0); fertMesh.name = "product_ready"; f.mesh.add(fertMesh);
-                    }
+                    if (f.type === 'bakery') { f.holeMesh.material.color.setHex(0x111111); const breadMesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.8, 1), new THREE.MeshStandardMaterial({color: 0xe67e22})); breadMesh.position.set(0, 6, 0); breadMesh.name = "product_ready"; f.mesh.add(breadMesh); } 
+                    else if (f.type === 'dairy') { const cheeseMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cheeseMesh.position.set(0, 6, 0); cheeseMesh.name = "product_ready"; f.mesh.add(cheeseMesh); } 
+                    else if (f.type === 'trench') { const silageMesh = new THREE.Mesh(new THREE.BoxGeometry(5, 1.2, 3), new THREE.MeshStandardMaterial({color: 0x689f38})); silageMesh.position.set(0, 0.8, 0); silageMesh.name = "product_ready"; f.mesh.add(silageMesh); } 
+                    else if (f.type === 'recycler') { const fertMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 1.5, 8), new THREE.MeshStandardMaterial({color: 0x2ecc71})); fertMesh.position.set(0, 6, 0); fertMesh.name = "product_ready"; f.mesh.add(fertMesh); }
                 } else { if (f.type === 'bakery') f.holeMesh.material.color.setHex(now % 500 < 250 ? 0xff5500 : 0xffaa00); }
             } else if (f.state === 'idle') { const oldProd = f.mesh.getObjectByName("product_ready"); if (oldProd) f.mesh.remove(oldProd); }
         });
 
-        // === PLANTAS ===
         const growthMult = this.weather.isRaining ? 3 : 1;
         this.plants.forEach(p => {
             if (p.progress < 1) {
