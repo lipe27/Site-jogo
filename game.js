@@ -1,9 +1,8 @@
 /**
- * NEBULA FARM PRO - VERSÃO DEFINITIVA BLINDADA 🚜
- * - Câmera bloqueada (Sem Fim do Mundo)
- * - Pescador Tião preso no Píer
- * - Animais e Plantas Voxel (Minecraft)
- * - Crash do Loading corrigido
+ * NEBULA FARM PRO - ATUALIZAÇÃO FINAL 🚜
+ * - Crescimento Voxel corrigido (não fica gigante)
+ * - Anti-Árvore na horta
+ * - Sistema de Ração e Frutas no Mercado
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -74,8 +73,6 @@ class NebulaFarmPro {
     initCloud() {
         if (!db || !this.currentUser) return this.startGame();
         let hasStarted = false;
-        
-        // Timeout de Segurança
         const safetyTimeout = setTimeout(() => { if(!hasStarted) { hasStarted = true; this.startGame(); } }, 5000);
         
         db.collection("fazendas").doc(this.currentUser.uid).get().then((doc) => {
@@ -125,10 +122,8 @@ class NebulaFarmPro {
     }
 
     setupLights() {
-        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
-        this.scene.add(this.ambientLight);
-        this.sun = new THREE.DirectionalLight(0xffffff, 1.0); 
-        this.sun.position.set(40, 60, 20); this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048); this.scene.add(this.sun);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4); this.scene.add(this.ambientLight);
+        this.sun = new THREE.DirectionalLight(0xffffff, 1.0); this.sun.position.set(40, 60, 20); this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048); this.scene.add(this.sun);
         this.houseLight = new THREE.PointLight(0xffaa00, 0, 30); this.houseLight.position.set(22, 6, -10); this.scene.add(this.houseLight);
     }
 
@@ -517,13 +512,22 @@ class NebulaFarmPro {
         for(let x=0; x<this.state.gridSize; x++) { for(let z=0; z<this.state.gridSize; z++) { const tile = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), dirtMat); tile.position.set(x * 3.5 - offset, 0.25, z * 3.5 - offset); tile.receiveShadow = true; tile.userData = { occupied: false }; this.scene.add(tile); this.tiles.push(tile); } }
     }
 
+    // NOVA MATEMÁTICA DE CRESCIMENTO E ARTE
     plant(tile, seedType) {
         if (tile.userData.occupied || this.state.inventory[seedType] <= 0) return;
         this.state.inventory[seedType]--; tile.userData.occupied = true;
+        
         const stalk = new THREE.Group();
-        if (seedType === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
-        else if (seedType === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
-        else if (seedType === 'corn') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
+        if (seedType === 'wheat') {
+            const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0);
+            const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2);
+        } else if (seedType === 'carrot') {
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top);
+        } else if (seedType === 'corn') {
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6;
+            const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob);
+        }
         stalk.position.set(tile.position.x, 0.4, tile.position.z); this.scene.add(stalk);
         this.plants.push({ mesh: stalk, tile, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
     }
@@ -532,7 +536,8 @@ class NebulaFarmPro {
         let targetTile = null; let minDist = Infinity;
         this.tiles.forEach(t => { if(!t.userData.occupied) { let dist = Math.sqrt(Math.pow(t.position.x - sp.x, 2) + Math.pow(t.position.z - sp.z, 2)); if (dist < minDist) { minDist = dist; targetTile = t; } } });
         if (targetTile) { 
-            targetTile.userData.occupied = true; const stalk = new THREE.Group();
+            targetTile.userData.occupied = true;
+            const stalk = new THREE.Group();
             if (sp.type === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
             else if (sp.type === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
             else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
@@ -547,14 +552,18 @@ class NebulaFarmPro {
         if (hasCollision) { this.spawnFX(window.innerWidth / 2, window.innerHeight / 2, "❌ LOCAL INVÁLIDO!", "#F44336"); return; }
         if (this.state.inventory[seedType] <= 0) return;
         this.state.inventory[seedType]--; const conf = this.config[seedType];
-        const mesh = new THREE.Group(); const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
+        
+        const mesh = new THREE.Group(); 
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
         const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
         mesh.add(trunk, leaves); mesh.position.set(point.x, 0, point.z); this.scene.add(mesh);
+        
         this.plants.push({ mesh: mesh, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
     }
 
     restoreTree(sp) {
-        const conf = this.config[sp.type]; const mesh = new THREE.Group(); 
+        const conf = this.config[sp.type]; 
+        const mesh = new THREE.Group(); 
         const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
         const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
         mesh.add(trunk, leaves); mesh.position.set(sp.x, 0, sp.z); this.scene.add(mesh);
@@ -567,6 +576,7 @@ class NebulaFarmPro {
         const p = this.plants[idx]; if (p.progress < 1) return;
         const conf = this.config[p.type]; 
         if (this.state.siloCount + conf.yield > this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
+        
         this.state.inventory[p.type] += conf.yield; this.state.siloCount += conf.yield; this.state.xp += conf.xp;
         if (conf.isTree) { p.progress = 0; p.plantedAt = Date.now(); p.mesh.children[1].material.color.setHex(conf.leafColor); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); } 
         else { p.tile.userData.occupied = false; if(typeof TWEEN !== 'undefined') new TWEEN.Tween(p.mesh.scale).to({x:0,y:0,z:0}, 200).onComplete(()=>this.scene.remove(p.mesh)).start(); else this.scene.remove(p.mesh); this.plants.splice(idx, 1); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); }
@@ -575,28 +585,44 @@ class NebulaFarmPro {
 
     setupInteractions() {
         const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+        
         window.addEventListener('pointerdown', (e) => {
             if (e.target.closest('#game-ui') || e.target.closest('#market-modal') || e.target.closest('#login-modal') || e.target.closest('.bubble-item') || e.target.closest('#mission-modal')) return;
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; raycaster.setFromCamera(mouse, this.camera);
+            
             if (this.tractor.isDriving) { const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) { this.tractor.target = new THREE.Vector3(hitsGrass[0].point.x, 0, hitsGrass[0].point.z); this.spawnFX(e.clientX, e.clientY, "🎯", "#e74c3c"); } return; }
             if (this.placementMode) { const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) this.validatePlacementPosition(hitsGrass[0].point.x, hitsGrass[0].point.z); return; }
+            
             const bubble = document.getElementById('bubble-menu'); if (bubble && bubble.style.display === 'flex') this.hideBubble();
             this.isPanning = true; this.panStart = { x: e.clientX, y: e.clientY }; this.hasPanned = false; this.pendingBubble = null;
 
             const npcMeshes = []; this.npcs.forEach(n => npcMeshes.push(...n.mesh.children));
             const hitsNPC = raycaster.intersectObjects(npcMeshes);
             if (hitsNPC.length > 0) { const npcData = hitsNPC[0].object.userData; const npc = this.npcs.find(n => n.mesh === npcData.parentRef); if (npc) { const randomPhrase = npc.phrases[Math.floor(Math.random() * npc.phrases.length)]; this.spawnFX(e.clientX, e.clientY - 30, `💬 "${randomPhrase}"`, "#ffffff"); } return; }
+
             if (this.tractor.mesh) { const hitsTractor = raycaster.intersectObjects(this.tractor.mesh.children); if (hitsTractor.length > 0) { this.tractor.isDriving = true; document.getElementById('driving-alert').style.display = 'block'; this.isPanning = false; return; } }
+
             const factoryMeshes = []; this.factories.forEach(f => factoryMeshes.push(...f.mesh.children));
             const hitsF = raycaster.intersectObjects(factoryMeshes);
             if (hitsF.length > 0) { const fac = this.factories.find(f => f.mesh === hitsF[0].object.userData.parentRef); if (fac && fac.state === 'idle') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: fac.type + '_idle' }; else if (fac && fac.state === 'ready') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: fac.type + '_ready' }; return; }
+
             const plantMeshes = this.plants.filter(p => p.progress >= 1).flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
             if (raycaster.intersectObjects(plantMeshes).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant' }; return; }
+
             const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
             if (raycaster.intersectObjects(animalMeshes).length > 0) { const anim = this.animals.find(a => a.mesh === raycaster.intersectObjects(animalMeshes)[0].object.userData.parentRef); if (anim.state === 'hungry') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'feed_animal' }; else if (anim.state === 'ready') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_animal' }; return; }
+
             if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return; }
-            const hitsTiles = raycaster.intersectObjects(this.tiles); if (hitsTiles.length > 0 && !hitsTiles[0].object.userData.occupied) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop' }; return; }
-            const hitsGrass = raycaster.intersectObject(this.grass); if (hitsGrass.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree' }; return; }
+            
+            // ANTI-ÁRVORE NA HORTA
+            const hitsTiles = raycaster.intersectObjects(this.tiles); 
+            if (hitsTiles.length > 0) { 
+                if (!hitsTiles[0].object.userData.occupied) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop' }; }
+                return; // Impede que o clique atravesse a horta e plante arvore
+            }
+            
+            const hitsGrass = raycaster.intersectObject(this.grass); 
+            if (hitsGrass.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree' }; return; }
         });
 
         window.addEventListener('pointermove', (e) => {
@@ -612,6 +638,7 @@ class NebulaFarmPro {
                 }
             }
         });
+
         window.addEventListener('pointerup', () => { if (this.placementMode) return; this.isPanning = false; if (this.activeDragTool) { this.isDragging = false; this.activeDragTool = null; this.hideBubble(); } else if (!this.hasPanned && this.pendingBubble) { this.showBubble(this.pendingBubble.x, this.pendingBubble.y, this.pendingBubble.ctx); } });
         window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.tractor.isDriving) { this.tractor.isDriving = false; document.getElementById('driving-alert').style.display = 'none'; } });
     }
@@ -687,65 +714,29 @@ class NebulaFarmPro {
         }
     }
 
-    harvestAnimal(animalGroup, x, y) {
-        const anim = this.animals.find(a => a.mesh === animalGroup);
-        if (!anim || anim.state !== 'ready' || this.state.siloCount + 1 > this.state.maxSilo) return;
-        const prodConf = this.config[anim.product]; this.state.inventory[anim.product]++; this.state.siloCount++; this.state.xp += prodConf.xp;
-        anim.state = 'hungry'; anim.mesh.position.y = 0; new TWEEN.Tween(anim.mesh.scale).to({x: 0.9, y: 0.8, z: 0.9}, 300).start();
-        let icon = anim.product === 'egg' ? '🥚' : (anim.product === 'milk' ? '🥛' : '🥓');
-        this.spawnFX(x, y, `+1 ${icon}`, "#FFD700"); this.checkLevel(); this.updateUI();
+    craftFeed() {
+        if (this.state.inventory.wheat >= 3 && this.state.inventory.corn >= 1) { 
+            this.state.inventory.wheat -= 3; this.state.inventory.corn -= 1; this.state.inventory.feed++; 
+            this.spawnFX(window.innerWidth/2, 200, "+1 🥣 RAÇÃO", "#FFD700"); this.updateUI(); this.saveToCloud(true);
+        } else { alert("Faltam ingredientes! (3x Trigo, 1x Milho)"); }
     }
 
-    startFishing(x, y) {
-        if (this.isFishing) return; 
-        if (this.state.inventory.corn <= 0) { this.spawnFX(x, y, "PRECISA DE 1 MILHO", "#F44336"); return; }
-        if (this.state.siloCount >= this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
-        this.state.inventory.corn--; this.isFishing = true; this.spawnFX(x, y, "PESCANDO...", "#3498db"); this.updateUI();
-        setTimeout(() => {
-            this.isFishing = false; const chance = Math.random();
-            if (chance > 0.4) { this.state.inventory.fish++; this.state.siloCount++; this.state.xp += this.config.fish.xp; this.spawnFX(x, y - 50, "🎣 PEGOU UM PEIXE!", "#4CAF50"); this.checkLevel(); } 
-            else { this.state.inventory.junk++; this.spawnFX(x, y - 50, "🥾 BOTA VELHA (+1 Lixo)", "#9e9e9e"); } 
-            this.updateUI(); this.saveToCloud(true);
-        }, 3000);
+    buyFeed(amount, cost) {
+        if (this.state.money >= cost) { 
+            this.state.money -= cost; this.state.inventory.feed += amount; 
+            this.spawnFX(window.innerWidth/2, 200, `+${amount} 🥣 RAÇÃO`, "#4CAF50"); this.updateUI(); this.saveToCloud(true); 
+        } else { alert("Dinheiro Insuficiente!"); }
     }
 
-    generateMission() {
-        const types = ['wheat', 'carrot', 'egg', 'apple']; 
-        if(this.state.unlocked.corn) types.push('corn'); if(this.state.unlocked.orange) types.push('orange'); if(this.state.enclosures.pigpen) types.push('bacon'); if(this.state.enclosures.corral) types.push('milk'); if(this.state.inventory.fish > 0) types.push('fish'); if(this.state.enclosures.bakery) types.push('bread'); if(this.state.enclosures.dairy) types.push('cheese'); if(this.state.enclosures.trench) types.push('silage'); 
-        const type = types[Math.floor(Math.random() * types.length)];
-        const qty = (type === 'bread' || type === 'cheese' || type === 'silage') ? Math.floor(Math.random() * 2) + 1 : Math.floor(Math.random() * 4) + 2; 
-        const basePrice = this.config[type] ? this.config[type].sellPrice : 0;
-        this.state.currentMission = { type, qty, reward: (basePrice * qty) * 2 }; this.updateUI();
+    buySeed(type, amount, cost) {
+        if (this.state.money >= cost) { if (!this.state.unlocked[type]) { alert("Suba de nível primeiro!"); return; } this.state.money -= cost; this.state.inventory[type] += amount; this.spawnFX(window.innerWidth/2, 200, `+${amount} ${type.toUpperCase()}`, "#4CAF50"); this.updateUI(); this.saveToCloud(true); } 
+        else { alert("Dinheiro Insuficiente!"); }
     }
 
-    openMissionModal() { const modal = document.getElementById('mission-modal'); if (modal) modal.classList.remove('modal-hidden'); }
-    closeMissionModal() { const modal = document.getElementById('mission-modal'); if (modal) modal.classList.add('modal-hidden'); }
-    completeMission() {
-        const m = this.state.currentMission;
-        if (this.state.inventory[m.type] >= m.qty) {
-            this.state.inventory[m.type] -= m.qty; this.state.siloCount -= m.qty; this.state.money += m.reward; this.state.xp += 150; 
-            this.spawnFX(window.innerWidth/2, 100, `ENTREGA FEITA! +$${m.reward}`, "#FFD700");
-            this.checkLevel(); this.generateMission(); this.closeMissionModal(); this.updateUI(); this.saveToCloud(true);
-        } else { alert("Você não tem os itens necessários!"); }
+    sellItem(type) {
+        if (this.state.inventory[type] > 0) { this.state.inventory[type]--; this.state.siloCount--; this.state.money += this.config[type].sellPrice; this.spawnFX(window.innerWidth/2, 200, `+ $${this.config[type].sellPrice}`, "#FFD700"); this.updateUI(); this.saveToCloud(true); } 
+        else { alert(`Estoque vazio!`); }
     }
-
-    checkLevel() {
-        if (this.state.xp >= this.state.lvl * 300) {
-            this.state.lvl++; this.state.xp = 0; this.state.inventory.wheat += 5; this.state.inventory.carrot += 5;
-            this.spawnFX(window.innerWidth/2, window.innerHeight/2 - 50, `LEVEL ${this.state.lvl}!`, "#4CAF50");
-            if (this.state.lvl === 2 && !this.state.unlocked.corn) { this.state.unlocked.corn = true; this.state.inventory.corn += 5; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "MILHO LIBERADO!", "#FFD700"), 1000); }
-            if (this.state.lvl === 3 && !this.state.unlocked.apple) { this.state.unlocked.apple = true; this.state.inventory.apple += 2; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "MACIEIRA!", "#e74c3c"), 1000); }
-            if (this.state.lvl === 4 && !this.state.unlocked.orange) { this.state.unlocked.orange = true; this.state.inventory.orange += 2; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "LARANJEIRA!", "#e67e22"), 1000); }
-            this.updateUI();
-        }
-    }
-
-    openMarket() { document.getElementById('market-modal').classList.remove('modal-hidden'); this.updateUI(); }
-    closeMarket() { document.getElementById('market-modal').classList.add('modal-hidden'); }
-    buyUpgrade(type, cost) { if (this.state.money >= cost) { this.state.money -= cost; if (type === 'silo') { this.state.maxSilo += 25; alert("Silo Ampliado!"); } else if (type === 'land') { this.state.gridSize += 1; this.renderGrid(); alert("Lote expandido!"); } this.updateUI(); } else { alert("Dinheiro Insuficiente!"); } }
-    buySeed(type, amount, cost) { if (this.state.money >= cost) { if (!this.state.unlocked[type]) { alert("Suba de nível primeiro!"); return; } this.state.money -= cost; this.state.inventory[type] += amount; this.spawnFX(window.innerWidth/2, 200, `+${amount} ${type.toUpperCase()}`, "#4CAF50"); this.updateUI(); this.saveToCloud(true); } else { alert("Dinheiro Insuficiente!"); } }
-    sellItem(type) { if (this.state.inventory[type] > 0) { this.state.inventory[type]--; this.state.siloCount--; this.state.money += this.config[type].sellPrice; this.spawnFX(window.innerWidth/2, 200, `+ $${this.config[type].sellPrice}`, "#FFD700"); this.updateUI(); this.saveToCloud(true); } else { alert(`Estoque vazio!`); } }
-    spawnFX(x, y, text, color) { const el = document.createElement('div'); el.className = 'floating-feedback'; el.innerText = text; el.style.color = color; el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
 
     updateUI() {
         const setTxt = (id, text) => { try { const el = document.getElementById(id); if (el) el.innerText = text; } catch(e) {} };
@@ -760,7 +751,8 @@ class NebulaFarmPro {
             try { const btnMission = document.getElementById('btn-mission'); if (btnMission) btnMission.disabled = this.state.inventory[m.type] < m.qty; } catch(e){}
         } else { if (alertBtn) alertBtn.classList.add('hidden'); }
 
-        setTxt('mkt-qty-wheat', this.state.inventory.wheat); setTxt('mkt-qty-carrot', this.state.inventory.carrot); setTxt('mkt-qty-apple', this.state.inventory.apple); setTxt('mkt-qty-orange', this.state.inventory.orange); setTxt('mkt-qty-corn', this.state.inventory.corn); setTxt('mkt-qty-egg', this.state.inventory.egg); setTxt('mkt-qty-milk', this.state.inventory.milk); setTxt('mkt-qty-bacon', this.state.inventory.bacon); setTxt('mkt-qty-fish', this.state.inventory.fish); setTxt('mkt-qty-bread', this.state.inventory.bread); setTxt('mkt-qty-cheese', this.state.inventory.cheese); setTxt('mkt-qty-silage', this.state.inventory.silage || 0); setTxt('mkt-qty-fertilizer', this.state.inventory.fertilizer || 0); setTxt('mkt-money', this.state.money); 
+        setTxt('mkt-qty-wheat', this.state.inventory.wheat); setTxt('mkt-qty-carrot', this.state.inventory.carrot); setTxt('mkt-qty-apple', this.state.inventory.apple); setTxt('mkt-qty-orange', this.state.inventory.orange); setTxt('mkt-qty-corn', this.state.inventory.corn); setTxt('mkt-qty-egg', this.state.inventory.egg); setTxt('mkt-qty-milk', this.state.inventory.milk); setTxt('mkt-qty-bacon', this.state.inventory.bacon); setTxt('mkt-qty-fish', this.state.inventory.fish); setTxt('mkt-qty-bread', this.state.inventory.bread); setTxt('mkt-qty-cheese', this.state.inventory.cheese); setTxt('mkt-qty-silage', this.state.inventory.silage || 0); setTxt('mkt-qty-fertilizer', this.state.inventory.fertilizer || 0); 
+        setTxt('mkt-qty-feed', this.state.inventory.feed); setTxt('mkt-money', this.state.money); 
     }
 
     animate(time) {
@@ -768,12 +760,12 @@ class NebulaFarmPro {
         if (typeof TWEEN !== 'undefined' && time) TWEEN.update(time);
         this.animations.forEach(fn => fn()); 
         this.updateAnimals(); this.updatePets(); this.updateNPCs(); 
+        
         const now = Date.now();
-
         if (now - this.weather.timer > 60000) { 
             this.weather.timer = now; this.weather.isRaining = Math.random() > 0.7; 
             const ind = document.getElementById('weather-indicator');
-            if (this.weather.isRaining) { this.rainParticles.visible = true; if(ind) { ind.className = 'weather-rain'; ind.innerText = '🌧️ CHOVENDO (+3x Crescimento)'; } } 
+            if (this.weather.isRaining) { this.rainParticles.visible = true; if(ind) { ind.className = 'weather-rain'; ind.innerText = '🌧️ CHOVENDO (+ Crescimento)'; } } 
             else { this.rainParticles.visible = false; if(ind) { ind.className = 'weather-clear'; ind.innerText = '☀️ ENSOLARADO'; } }
         }
         if (this.weather.isRaining && this.rainParticles) {
@@ -835,12 +827,17 @@ class NebulaFarmPro {
             } else if (f.state === 'idle') { const oldProd = f.mesh.getObjectByName("product_ready"); if (oldProd) f.mesh.remove(oldProd); }
         });
 
+        // CRESCIMENTO DAS PLANTAS (MATEMÁTICA CORRIGIDA)
         const growthMult = this.weather.isRaining ? 3 : 1;
         this.plants.forEach(p => {
             if (p.progress < 1) {
                 const conf = this.config[p.type]; p.progress += (growthMult * 16) / conf.time; if (p.progress > 1) p.progress = 1;
-                if (!conf.isTree) { p.mesh.scale.set(1 + p.progress*2, 1 + p.progress*10, 1 + p.progress*2); p.mesh.position.y = 0.4 + (p.mesh.scale.y * 0.05); } 
-                else { const leaves = p.mesh.children[1]; leaves.scale.set(1 + p.progress*0.3, 1 + p.progress*0.3, 1 + p.progress*0.3); }
+                if (!conf.isTree) { 
+                    const s = 0.3 + (p.progress * 0.7); // Cresce de 30% a 100% (Não fica mais gigante)
+                    p.mesh.scale.set(s, s, s); p.mesh.position.y = 0.2 + (s * 0.2); 
+                } else { 
+                    const leaves = p.mesh.children[1]; leaves.scale.set(1 + p.progress*0.3, 1 + p.progress*0.3, 1 + p.progress*0.3); 
+                }
                 if (p.progress === 1) { if (conf.isTree) p.mesh.children[1].material.color.setHex(conf.readyColor); }
             }
         });
