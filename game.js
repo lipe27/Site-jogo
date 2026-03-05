@@ -1,7 +1,7 @@
 /**
- * NEBULA FARM PRO - CORREÇÃO DA TELA PRETA 🚜
- * - Erro de digitação no milho (THREE.MeshStandardMaterial) corrigido.
- * - Sistema Tap & Swipe funcionando liso.
+ * NEBULA FARM PRO - VERSÃO DEFINITIVA BLINDADA 🚜
+ * - Sistema de Cercados: Clique no chão do cercado para abrir o menu!
+ * - Arraste a ração por cima dos animais para alimentar em massa.
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -27,6 +27,8 @@ class NebulaFarmPro {
         this.scene = new THREE.Scene(); this.camera = null; this.renderer = null;
         this.grass = null; this.lake = null; this.tiles = []; this.plants = []; this.animations = [];
         this.animals = []; this.pets = []; this.npcs = []; this.factories = []; this.constructions = []; this.obstacles = []; this.decorations = []; 
+        this.enclosureFloors = []; // NOVO: Guarda o "chão" dos cercados para clique rápido
+        
         this.isDragging = false; this.activeDragTool = null; this.lastTreePlantTime = 0; 
         this.isPanning = false; this.panStart = { x: 0, y: 0 }; this.hasPanned = false; this.pendingBubble = null;   
         this.placementMode = false; this.placementType = null; this.placementCost = 0; this.placementGhost = null; this.placementGrid = null; this.placementIsValid = false;
@@ -345,6 +347,14 @@ class NebulaFarmPro {
         const f2 = new THREE.Mesh(geoH, new THREE.MeshStandardMaterial({color})); f2.position.set(x, 0.5, z + d/2);
         const f3 = new THREE.Mesh(geoV, new THREE.MeshStandardMaterial({color})); f3.position.set(x - w/2, 0.5, z);
         const f4 = new THREE.Mesh(geoV, new THREE.MeshStandardMaterial({color})); f4.position.set(x + w/2, 0.5, z);
+        
+        // CHÃO DO CERCADO (Para Clicar e Abrir Menu de Animais)
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, d), new THREE.MeshStandardMaterial({color: 0x5d4037, transparent: true, opacity: 0.2}));
+        floor.position.set(x, 0.05, z);
+        floor.userData = { isEnclosureFloor: true };
+        this.scene.add(floor);
+        this.enclosureFloors.push(floor);
+
         this.scene.add(f1, f2, f3, f4);
     }
 
@@ -490,92 +500,6 @@ class NebulaFarmPro {
         });
     }
 
-    createBird() {
-        const bird = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x2980b9})); bird.add(body);
-        const pivot = new THREE.Group(); pivot.position.set((Math.random()-0.5)*100, 15 + Math.random()*5, (Math.random()-0.5)*100);
-        bird.position.set(10 + Math.random()*5, 0, 0); pivot.add(bird); this.scene.add(pivot);
-        this.animations.push(() => { pivot.rotation.y += 0.02; bird.position.y = Math.sin(Date.now() * 0.005) * 2; });
-    }
-
-    createTree(x, z) {
-        for(const obs of this.obstacles) { if (Math.sqrt(Math.pow(x - obs.x, 2) + Math.pow(z - obs.z, 2)) < obs.r + 3) return; }
-        const tree = new THREE.Group();
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4, 0.8), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 2;
-        const leaves = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshStandardMaterial({color: 0x388e3c})); leaves.position.y = 5;
-        tree.add(trunk, leaves); tree.position.set(x, 0, z); this.scene.add(tree);
-    }
-
-    renderGrid() {
-        this.tiles.forEach(t => this.scene.remove(t)); this.tiles = []; const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 }); const offset = (this.state.gridSize * 3.5) / 2 - 1.75; 
-        for(let x=0; x<this.state.gridSize; x++) { for(let z=0; z<this.state.gridSize; z++) { const tile = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), dirtMat); tile.position.set(x * 3.5 - offset, 0.25, z * 3.5 - offset); tile.receiveShadow = true; tile.userData = { occupied: false }; this.scene.add(tile); this.tiles.push(tile); } }
-    }
-
-    plant(tile, seedType) {
-        if (tile.userData.occupied || this.state.inventory[seedType] <= 0) return;
-        this.state.inventory[seedType]--; tile.userData.occupied = true;
-        
-        const stalk = new THREE.Group();
-        if (seedType === 'wheat') {
-            const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0);
-            const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2);
-        } else if (seedType === 'carrot') {
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25;
-            const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top);
-        } else if (seedType === 'corn') {
-            const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6;
-            const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob);
-        }
-        stalk.position.set(tile.position.x, 0.4, tile.position.z); this.scene.add(stalk);
-        this.plants.push({ mesh: stalk, tile, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
-    }
-
-    restoreCrop(sp) {
-        let targetTile = null; let minDist = Infinity;
-        this.tiles.forEach(t => { if(!t.userData.occupied) { let dist = Math.sqrt(Math.pow(t.position.x - sp.x, 2) + Math.pow(t.position.z - sp.z, 2)); if (dist < minDist) { minDist = dist; targetTile = t; } } });
-        if (targetTile) { 
-            targetTile.userData.occupied = true;
-            const stalk = new THREE.Group();
-            if (sp.type === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
-            else if (sp.type === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
-            else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
-            stalk.position.set(targetTile.position.x, 0.4, targetTile.position.z); this.scene.add(stalk);
-            this.plants.push({ mesh: stalk, tile: targetTile, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
-        }
-    }
-
-    plantTree(point, seedType) {
-        if (this.state.inventory[seedType] <= 0) return;
-        this.state.inventory[seedType]--; const conf = this.config[seedType];
-        const mesh = new THREE.Group(); 
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
-        const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
-        mesh.add(trunk, leaves); mesh.position.set(point.x, 0, point.z); this.scene.add(mesh);
-        this.plants.push({ mesh: mesh, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
-    }
-
-    restoreTree(sp) {
-        const conf = this.config[sp.type]; 
-        const mesh = new THREE.Group(); 
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
-        const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
-        mesh.add(trunk, leaves); mesh.position.set(sp.x, 0, sp.z); this.scene.add(mesh);
-        this.plants.push({ mesh: mesh, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
-    }
-
-    harvestPlant(mesh, x, y) {
-        let targetMesh = mesh; if (mesh.parent && mesh.parent.type === "Group") targetMesh = mesh.parent;
-        const idx = this.plants.findIndex(p => p.mesh === targetMesh); if (idx === -1) return;
-        const p = this.plants[idx]; if (p.progress < 1) return;
-        const conf = this.config[p.type]; 
-        if (this.state.siloCount + conf.yield > this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
-        
-        this.state.inventory[p.type] += conf.yield; this.state.siloCount += conf.yield; this.state.xp += conf.xp;
-        if (conf.isTree) { p.progress = 0; p.plantedAt = Date.now(); p.mesh.children[1].material.color.setHex(conf.leafColor); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); } 
-        else { p.tile.userData.occupied = false; if(typeof TWEEN !== 'undefined') new TWEEN.Tween(p.mesh.scale).to({x:0,y:0,z:0}, 200).onComplete(()=>this.scene.remove(p.mesh)).start(); else this.scene.remove(p.mesh); this.plants.splice(idx, 1); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); }
-        this.checkLevel(); this.updateUI(); this.saveToCloud(true);
-    }
-
     setupInteractions() {
         const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2();
         
@@ -591,7 +515,7 @@ class NebulaFarmPro {
 
             const npcMeshes = []; this.npcs.forEach(n => npcMeshes.push(...n.mesh.children));
             const hitsNPC = raycaster.intersectObjects(npcMeshes);
-            if (hitsNPC.length > 0) { const npcData = hitsNPC[0].object.userData; const npc = this.npcs.find(n => n.mesh === npcData.parentRef); if (npc) { const randomPhrase = npc.phrases[Math.floor(Math.random() * npc.phrases.length)]; this.spawnFX(e.clientX, e.clientY - 30, `💬 "${randomPhrase}"`, "#ffffff"); } return; }
+            if (hitsNPC.length > 0) { const npcData = hitsNPC[0].object.userData; const npc = this.npcs.find(n => n.mesh === npcData.parentRef); if (npc) { const randomPhrase = npc.phrases[Math.floor(Math.random() * Math.random() * npc.phrases.length)]; this.spawnFX(e.clientX, e.clientY - 30, `💬 "${randomPhrase}"`, "#ffffff"); } return; }
 
             if (this.tractor.mesh) { const hitsTractor = raycaster.intersectObjects(this.tractor.mesh.children); if (hitsTractor.length > 0) { this.tractor.isDriving = true; document.getElementById('driving-alert').style.display = 'block'; this.isPanning = false; return; } }
 
@@ -602,8 +526,13 @@ class NebulaFarmPro {
             const plantMeshes = this.plants.filter(p => p.progress >= 1).flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
             if (raycaster.intersectObjects(plantMeshes).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant' }; return; }
 
+            // SISTEMA DE CERCADO (CLICA NO CHÃO PARA ABRIR MENU DE ANIMAIS)
+            const hitsFloor = raycaster.intersectObjects(this.enclosureFloors);
+            if (hitsFloor.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'animal_actions' }; return; }
+
             const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
-            if (raycaster.intersectObjects(animalMeshes).length > 0) { const anim = this.animals.find(a => a.mesh === raycaster.intersectObjects(animalMeshes)[0].object.userData.parentRef); if (anim.state === 'hungry') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'feed_animal' }; else if (anim.state === 'ready') this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_animal' }; return; }
+            const hitsA = raycaster.intersectObjects(animalMeshes); 
+            if (hitsA.length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'animal_actions' }; return; }
 
             if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return; }
             
@@ -652,9 +581,10 @@ class NebulaFarmPro {
         } else if (context === 'plant_tree') {
             if(this.state.unlocked.apple) bubble.innerHTML += this.createBubbleItem('apple', '🌳', this.state.inventory.apple);
             if(this.state.unlocked.orange) bubble.innerHTML += this.createBubbleItem('orange', '🍊', this.state.inventory.orange);
-        } else if (context === 'harvest_plant' || context === 'harvest_animal') {
+        } else if (context === 'harvest_plant') {
             bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR');
-        } else if (context === 'feed_animal') {
+        } else if (context === 'animal_actions') { // MENU UNIFICADO DE ANIMAIS
+            bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR');
             bubble.innerHTML += this.createBubbleItem('feed', '🥣', this.state.inventory.feed);
         } else if (context === 'fish') {
             bubble.innerHTML += this.createBubbleItem('fish', '🎣', '1🌽');
@@ -691,7 +621,6 @@ class NebulaFarmPro {
                     m.x = (x / window.innerWidth) * 2 - 1; m.y = -(y / window.innerHeight) * 2 + 1;
                     r.setFromCamera(m, this.camera);
                     
-                    // Força a injeção do hitObj para garantir que o Tap funcione na horta certa
                     if (pendingData && pendingData.hitObj) {
                         this.plant(pendingData.hitObj, this.activeDragTool);
                         this.updateBubbleQuantity(this.activeDragTool);
@@ -932,7 +861,8 @@ class NebulaFarmPro {
             if (p.progress < 1) {
                 const conf = this.config[p.type]; p.progress += (growthMult * 16) / conf.time; if (p.progress > 1) p.progress = 1;
                 if (!conf.isTree) { 
-                    const s = 0.3 + (p.progress * 0.7); 
+                    let s = 0.3 + (p.progress * 0.7); 
+                    if (s > 1) s = 1;
                     p.mesh.scale.set(s, s, s); p.mesh.position.y = 0.2 + (s * 0.2); 
                 } 
                 else { const leaves = p.mesh.children[1]; leaves.scale.set(1 + p.progress*0.3, 1 + p.progress*0.3, 1 + p.progress*0.3); }
