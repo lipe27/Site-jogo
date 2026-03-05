@@ -1,8 +1,7 @@
 /**
- * NEBULA FARM PRO - VERSÃO DEFINITIVA BLINDADA 🚜
- * - Sistema Tap & Swipe para Plantio Simples
- * - Bloqueio de Árvores na Horta
- * - Crescimento de Plantas Limitado
+ * NEBULA FARM PRO - CORREÇÃO DA TELA PRETA 🚜
+ * - Erro de digitação no milho (THREE.MeshStandardMaterial) corrigido.
+ * - Sistema Tap & Swipe funcionando liso.
  */
 
 window.onerror = function(message, source, lineno) { 
@@ -539,7 +538,7 @@ class NebulaFarmPro {
             const stalk = new THREE.Group();
             if (sp.type === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
             else if (sp.type === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
-            else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
+            else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
             stalk.position.set(targetTile.position.x, 0.4, targetTile.position.z); this.scene.add(stalk);
             this.plants.push({ mesh: stalk, tile: targetTile, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
         }
@@ -608,7 +607,6 @@ class NebulaFarmPro {
 
             if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; return; }
             
-            // ANTI-ÁRVORE PERFEITO (Bloqueia clique atravessado)
             const hitsTiles = raycaster.intersectObjects(this.tiles); 
             if (hitsTiles.length > 0) { 
                 if (!hitsTiles[0].object.userData.occupied) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop', hitObj: hitsTiles[0].object }; }
@@ -643,7 +641,6 @@ class NebulaFarmPro {
         window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.tractor.isDriving) { this.tractor.isDriving = false; document.getElementById('driving-alert').style.display = 'none'; } });
     }
 
-    // SISTEMA TAP & SWIPE
     showBubble(x, y, context, pendingData) {
         const bubble = document.getElementById('bubble-menu'); if (!bubble) return;
         bubble.style.left = x + 'px'; bubble.style.top = y + 'px'; bubble.style.display = 'flex'; bubble.innerHTML = '';
@@ -690,12 +687,20 @@ class NebulaFarmPro {
                     this.activeDragTool = e.currentTarget.dataset.tool; 
                     this.isDragging = true; 
                     
-                    // MECÂNICA TAP-TO-PLANT (Planta na hora se apenas tocar)
                     const r = new THREE.Raycaster(); const m = new THREE.Vector2();
                     m.x = (x / window.innerWidth) * 2 - 1; m.y = -(y / window.innerHeight) * 2 + 1;
                     r.setFromCamera(m, this.camera);
-                    this.applyDragTool(r, x, y);
-
+                    
+                    // Força a injeção do hitObj para garantir que o Tap funcione na horta certa
+                    if (pendingData && pendingData.hitObj) {
+                        this.plant(pendingData.hitObj, this.activeDragTool);
+                        this.updateBubbleQuantity(this.activeDragTool);
+                    } else if (pendingData && pendingData.hitPoint) {
+                        this.plantTree(pendingData.hitPoint, this.activeDragTool);
+                        this.updateBubbleQuantity(this.activeDragTool);
+                    } else {
+                        this.applyDragTool(r, x, y);
+                    }
                     e.stopPropagation(); 
                 });
             }
@@ -750,23 +755,95 @@ class NebulaFarmPro {
         } else {
             const seedType = this.activeDragTool;
             if (this.config[seedType].isTree) { 
-                let pnt = null;
-                if (this.pendingBubble && this.pendingBubble.hitPoint) pnt = this.pendingBubble.hitPoint;
-                else { const hitsGrass = raycaster.intersectObject(this.grass); if(hitsGrass.length > 0) pnt = hitsGrass[0].point; }
-                if (pnt && Date.now() - this.lastTreePlantTime > 400) { this.plantTree(pnt, seedType); this.lastTreePlantTime = Date.now(); this.updateBubbleQuantity(seedType); }
+                const hitsGrass = raycaster.intersectObject(this.grass); 
+                if (hitsGrass.length > 0 && Date.now() - this.lastTreePlantTime > 400) { this.plantTree(hitsGrass[0].point, seedType); this.lastTreePlantTime = Date.now(); this.updateBubbleQuantity(seedType); }
             } else { 
-                let targetObj = null;
-                if (this.pendingBubble && this.pendingBubble.hitObj) targetObj = this.pendingBubble.hitObj;
-                else { const hitsTiles = raycaster.intersectObjects(this.tiles); if(hitsTiles.length>0) targetObj = hitsTiles[0].object; }
-                if (targetObj) { this.plant(targetObj, seedType); this.updateBubbleQuantity(seedType); } 
+                const hitsTiles = raycaster.intersectObjects(this.tiles); 
+                if (hitsTiles.length > 0) { this.plant(hitsTiles[0].object, seedType); this.updateBubbleQuantity(seedType); } 
             }
         }
     }
+
+    harvestAnimal(animalGroup, x, y) {
+        const anim = this.animals.find(a => a.mesh === animalGroup);
+        if (!anim || anim.state !== 'ready' || this.state.siloCount + 1 > this.state.maxSilo) return;
+        const prodConf = this.config[anim.product]; this.state.inventory[anim.product]++; this.state.siloCount++; this.state.xp += prodConf.xp;
+        anim.state = 'hungry'; anim.mesh.position.y = 0; new TWEEN.Tween(anim.mesh.scale).to({x: 0.9, y: 0.8, z: 0.9}, 300).start();
+        let icon = anim.product === 'egg' ? '🥚' : (anim.product === 'milk' ? '🥛' : '🥓');
+        this.spawnFX(x, y, `+1 ${icon}`, "#FFD700"); this.checkLevel(); this.updateUI();
+    }
+
+    startFishing(x, y) {
+        if (this.isFishing) return; 
+        if (this.state.inventory.corn <= 0) { this.spawnFX(x, y, "PRECISA DE 1 MILHO", "#F44336"); return; }
+        if (this.state.siloCount >= this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
+        this.state.inventory.corn--; this.isFishing = true; this.spawnFX(x, y, "PESCANDO...", "#3498db"); this.updateUI();
+        setTimeout(() => {
+            this.isFishing = false; const chance = Math.random();
+            if (chance > 0.4) { this.state.inventory.fish++; this.state.siloCount++; this.state.xp += this.config.fish.xp; this.spawnFX(x, y - 50, "🎣 PEGOU UM PEIXE!", "#4CAF50"); this.checkLevel(); } 
+            else { this.state.inventory.junk++; this.spawnFX(x, y - 50, "🥾 BOTA VELHA (+1 Lixo)", "#9e9e9e"); } 
+            this.updateUI(); this.saveToCloud(true);
+        }, 3000);
+    }
+
+    generateMission() {
+        const types = ['wheat', 'carrot', 'egg', 'apple']; 
+        if(this.state.unlocked.corn) types.push('corn'); if(this.state.unlocked.orange) types.push('orange'); if(this.state.enclosures.pigpen) types.push('bacon'); if(this.state.enclosures.corral) types.push('milk'); if(this.state.inventory.fish > 0) types.push('fish'); if(this.state.enclosures.bakery) types.push('bread'); if(this.state.enclosures.dairy) types.push('cheese'); if(this.state.enclosures.trench) types.push('silage'); 
+        const type = types[Math.floor(Math.random() * types.length)];
+        const qty = (type === 'bread' || type === 'cheese' || type === 'silage') ? Math.floor(Math.random() * 2) + 1 : Math.floor(Math.random() * 4) + 2; 
+        const basePrice = this.config[type] ? this.config[type].sellPrice : 0;
+        this.state.currentMission = { type, qty, reward: (basePrice * qty) * 2 }; this.updateUI();
+    }
+
+    openMissionModal() { const modal = document.getElementById('mission-modal'); if (modal) modal.classList.remove('modal-hidden'); }
+    closeMissionModal() { const modal = document.getElementById('mission-modal'); if (modal) modal.classList.add('modal-hidden'); }
+    completeMission() {
+        const m = this.state.currentMission;
+        if (this.state.inventory[m.type] >= m.qty) {
+            this.state.inventory[m.type] -= m.qty; this.state.siloCount -= m.qty; this.state.money += m.reward; this.state.xp += 150; 
+            this.spawnFX(window.innerWidth/2, 100, `ENTREGA FEITA! +$${m.reward}`, "#FFD700");
+            this.checkLevel(); this.generateMission(); this.closeMissionModal(); this.updateUI(); this.saveToCloud(true);
+        } else { alert("Você não tem os itens necessários!"); }
+    }
+
+    checkLevel() {
+        if (this.state.xp >= this.state.lvl * 300) {
+            this.state.lvl++; this.state.xp = 0; this.state.inventory.wheat += 5; this.state.inventory.carrot += 5;
+            this.spawnFX(window.innerWidth/2, window.innerHeight/2 - 50, `LEVEL ${this.state.lvl}!`, "#4CAF50");
+            if (this.state.lvl === 2 && !this.state.unlocked.corn) { this.state.unlocked.corn = true; this.state.inventory.corn += 5; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "MILHO LIBERADO!", "#FFD700"), 1000); }
+            if (this.state.lvl === 3 && !this.state.unlocked.apple) { this.state.unlocked.apple = true; this.state.inventory.apple += 2; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "MACIEIRA!", "#e74c3c"), 1000); }
+            if (this.state.lvl === 4 && !this.state.unlocked.orange) { this.state.unlocked.orange = true; this.state.inventory.orange += 2; setTimeout(() => this.spawnFX(window.innerWidth/2, window.innerHeight/2 + 20, "LARANJEIRA!", "#e67e22"), 1000); }
+            this.updateUI();
+        }
+    }
+
+    openMarket() { document.getElementById('market-modal').classList.remove('modal-hidden'); this.updateUI(); }
+    closeMarket() { document.getElementById('market-modal').classList.add('modal-hidden'); }
+    
+    craftFeed() {
+        if (this.state.inventory.wheat >= 3 && this.state.inventory.corn >= 1) { 
+            this.state.inventory.wheat -= 3; this.state.inventory.corn -= 1; this.state.inventory.feed++; 
+            this.spawnFX(window.innerWidth/2, 200, "🥣 RAÇÃO PRONTA!", "#FFD700"); this.updateUI(); this.saveToCloud(true);
+        } else { alert("Faltam ingredientes! (3x Trigo, 1x Milho)"); }
+    }
+
+    buyFeed(amount, cost) {
+        if (this.state.money >= cost) { 
+            this.state.money -= cost; this.state.inventory.feed += amount; 
+            this.spawnFX(window.innerWidth/2, 200, `+${amount} 🥣 RAÇÃO`, "#4CAF50"); this.updateUI(); this.saveToCloud(true); 
+        } else { alert("Dinheiro Insuficiente!"); }
+    }
+
+    buyUpgrade(type, cost) { if (this.state.money >= cost) { this.state.money -= cost; if (type === 'silo') { this.state.maxSilo += 25; alert("Silo Ampliado!"); } else if (type === 'land') { this.state.gridSize += 1; this.renderGrid(); alert("Lote expandido!"); } this.updateUI(); } else { alert("Dinheiro Insuficiente!"); } }
+    buySeed(type, amount, cost) { if (this.state.money >= cost) { if (!this.state.unlocked[type]) { alert("Suba de nível primeiro!"); return; } this.state.money -= cost; this.state.inventory[type] += amount; this.spawnFX(window.innerWidth/2, 200, `+${amount} ${type.toUpperCase()}`, "#4CAF50"); this.updateUI(); this.saveToCloud(true); } else { alert("Dinheiro Insuficiente!"); } }
+    sellItem(type) { if (this.state.inventory[type] > 0) { this.state.inventory[type]--; this.state.siloCount--; this.state.money += this.config[type].sellPrice; this.spawnFX(window.innerWidth/2, 200, `+ $${this.config[type].sellPrice}`, "#FFD700"); this.updateUI(); this.saveToCloud(true); } else { alert(`Estoque vazio!`); } }
+    spawnFX(x, y, text, color) { const el = document.createElement('div'); el.className = 'floating-feedback'; el.innerText = text; el.style.color = color; el.style.left = x + 'px'; el.style.top = y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
 
     updateUI() {
         const setTxt = (id, text) => { try { const el = document.getElementById(id); if (el) el.innerText = text; } catch(e) {} };
         setTxt('money', this.state.money); setTxt('silo-text', `${this.state.siloCount}/${this.state.maxSilo}`); setTxt('lvl', this.state.lvl);
         try { const xpBar = document.getElementById('xp-bar'); if (xpBar) xpBar.style.width = (this.state.xp / (this.state.lvl * 300)) * 100 + "%"; } catch(e){}
+
         const alertBtn = document.getElementById('mission-alert');
         if (this.state.currentMission) {
             if (alertBtn) alertBtn.classList.remove('hidden');
@@ -774,6 +851,7 @@ class NebulaFarmPro {
             setTxt('mission-text', `Entregar ${m.qty} ${itemNames[m.type] || m.type}`); setTxt('mission-reward-val', m.reward);
             try { const btnMission = document.getElementById('btn-mission'); if (btnMission) btnMission.disabled = this.state.inventory[m.type] < m.qty; } catch(e){}
         } else { if (alertBtn) alertBtn.classList.add('hidden'); }
+
         setTxt('mkt-qty-wheat', this.state.inventory.wheat); setTxt('mkt-qty-carrot', this.state.inventory.carrot); setTxt('mkt-qty-apple', this.state.inventory.apple); setTxt('mkt-qty-orange', this.state.inventory.orange); setTxt('mkt-qty-corn', this.state.inventory.corn); setTxt('mkt-qty-egg', this.state.inventory.egg); setTxt('mkt-qty-milk', this.state.inventory.milk); setTxt('mkt-qty-bacon', this.state.inventory.bacon); setTxt('mkt-qty-fish', this.state.inventory.fish); setTxt('mkt-qty-bread', this.state.inventory.bread); setTxt('mkt-qty-cheese', this.state.inventory.cheese); setTxt('mkt-qty-silage', this.state.inventory.silage || 0); setTxt('mkt-qty-fertilizer', this.state.inventory.fertilizer || 0); setTxt('mkt-qty-feed', this.state.inventory.feed); setTxt('mkt-money', this.state.money); 
     }
 
@@ -787,7 +865,7 @@ class NebulaFarmPro {
         if (now - this.weather.timer > 60000) { 
             this.weather.timer = now; this.weather.isRaining = Math.random() > 0.7; 
             const ind = document.getElementById('weather-indicator');
-            if (this.weather.isRaining) { this.rainParticles.visible = true; if(ind) { ind.className = 'weather-rain'; ind.innerText = '🌧️ CHOVENDO (+3x Crescimento)'; } } 
+            if (this.weather.isRaining) { this.rainParticles.visible = true; if(ind) { ind.className = 'weather-rain'; ind.innerText = '🌧️ CHOVENDO (+ Crescimento)'; } } 
             else { this.rainParticles.visible = false; if(ind) { ind.className = 'weather-clear'; ind.innerText = '☀️ ENSOLARADO'; } }
         }
         if (this.weather.isRaining && this.rainParticles) {
@@ -799,6 +877,7 @@ class NebulaFarmPro {
         if (!this.weather.isRaining) this.timeOfDay += 0.0005; 
         const sunHeight = this.weather.isRaining ? 0.2 : Math.sin(this.timeOfDay);
         this.sun.position.y = sunHeight * 60; this.sun.position.x = Math.cos(this.timeOfDay) * 60;
+
         if (sunHeight > 0 && !this.weather.isRaining) {
             this.scene.background.lerp(new THREE.Color(0x87CEEB), 0.05); this.scene.fog.color.lerp(new THREE.Color(0x87CEEB), 0.05);
             this.sun.intensity = sunHeight * 1.0; this.ambientLight.intensity = 0.4; this.houseLight.intensity = 0; 
@@ -848,13 +927,12 @@ class NebulaFarmPro {
             } else if (f.state === 'idle') { const oldProd = f.mesh.getObjectByName("product_ready"); if (oldProd) f.mesh.remove(oldProd); }
         });
 
-        // CRESCIMENTO LIMITADO E CONTROLADO
         const growthMult = this.weather.isRaining ? 3 : 1;
         this.plants.forEach(p => {
             if (p.progress < 1) {
                 const conf = this.config[p.type]; p.progress += (growthMult * 16) / conf.time; if (p.progress > 1) p.progress = 1;
                 if (!conf.isTree) { 
-                    const s = 0.3 + (p.progress * 0.7); // TETO DE CRESCIMENTO!
+                    const s = 0.3 + (p.progress * 0.7); 
                     p.mesh.scale.set(s, s, s); p.mesh.position.y = 0.2 + (s * 0.2); 
                 } 
                 else { const leaves = p.mesh.children[1]; leaves.scale.set(1 + p.progress*0.3, 1 + p.progress*0.3, 1 + p.progress*0.3); }
