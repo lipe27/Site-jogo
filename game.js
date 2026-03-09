@@ -1,9 +1,3 @@
-/**
- * NEBULA FARM PRO - CÓDIGO ESTÁVEL 🚜
- * - Sistema de cliques restaurado e protegido (Fim da Árvore na horta)
- * - Escudo Global Anti-Tela Preta
- */
-
 window.onerror = function(message, source, lineno) { 
     console.error(`ERRO: ${message} (Linha: ${lineno})`); 
     return false; 
@@ -25,12 +19,14 @@ class NebulaFarmPro {
     constructor() {
         this.scene = new THREE.Scene(); this.camera = null; this.renderer = null;
         this.grass = null; this.lake = null; this.tiles = []; this.plants = []; this.animations = [];
-        this.animals = []; this.pets = []; this.npcs = []; this.factories = []; this.constructions = []; this.obstacles = []; this.decorations = []; 
-        this.enclosureFloors = []; 
+        this.animals = []; this.pets = []; this.npcs = []; this.factories = []; this.constructions = []; 
+        this.obstacles = []; this.decorations = []; this.enclosureFloors = []; 
         
-        this.isDragging = false; this.activeDragTool = null; this.lastTreePlantTime = 0; 
-        this.isPanning = false; this.panStart = { x: 0, y: 0 }; this.hasPanned = false; this.pendingBubble = null;   
-        this.placementMode = false; this.placementType = null; this.placementCost = 0; this.placementGhost = null; this.placementGrid = null; this.placementIsValid = false;
+        this.isPanning = false; this.panStart = { x: 0, y: 0 }; 
+        this.pendingAction = null; // Armazena o alvo exato do clique
+        
+        this.placementMode = false; this.placementType = null; this.placementCost = 0; 
+        this.placementGhost = null; this.placementGrid = null; this.placementIsValid = false;
         this.isFishing = false; this.timeOfDay = 1.5; this.currentUser = null; 
         this.weather = { isRaining: false, timer: 0 }; this.rainParticles = null;
         this.tractor = { active: false, mesh: null, isDriving: false, target: null };
@@ -44,9 +40,14 @@ class NebulaFarmPro {
         };
 
         this.config = {
-            wheat: { color: 0xFFD700, time: 120000, yield: 2, sellPrice: 2, xp: 10 }, carrot: { color: 0xFF4500, time: 240000, yield: 2, sellPrice: 5, xp: 20 }, corn: { color: 0xFFEB3B, time: 600000, yield: 2, sellPrice: 12, xp: 50 },
-            apple: { isTree: true, leafColor: 0x27ae60, readyColor: 0xe74c3c, time: 180000, yield: 3, sellPrice: 10, xp: 30 }, orange: { isTree: true, leafColor: 0x2ecc71, readyColor: 0xe67e22, time: 240000, yield: 3, sellPrice: 16, xp: 45 },
-            egg: { sellPrice: 8, xp: 15 }, milk: { sellPrice: 15, xp: 30 }, bacon: { sellPrice: 20, xp: 40 }, fish: { sellPrice: 25, xp: 50 }, bread: { sellPrice: 35, xp: 60 }, cheese: { sellPrice: 45, xp: 80 }, silage: { sellPrice: 50, xp: 60 }, fertilizer: { sellPrice: 30, xp: 50 } 
+            wheat: { color: 0xFFD700, time: 120000, yield: 2, sellPrice: 2, xp: 10 }, 
+            carrot: { color: 0xFF4500, time: 240000, yield: 2, sellPrice: 5, xp: 20 }, 
+            corn: { color: 0xFFEB3B, time: 600000, yield: 2, sellPrice: 12, xp: 50 },
+            apple: { isTree: true, leafColor: 0x27ae60, readyColor: 0xe74c3c, time: 180000, yield: 3, sellPrice: 10, xp: 30 }, 
+            orange: { isTree: true, leafColor: 0x2ecc71, readyColor: 0xe67e22, time: 240000, yield: 3, sellPrice: 16, xp: 45 },
+            egg: { sellPrice: 8, xp: 15 }, milk: { sellPrice: 15, xp: 30 }, bacon: { sellPrice: 20, xp: 40 }, 
+            fish: { sellPrice: 25, xp: 50 }, bread: { sellPrice: 35, xp: 60 }, cheese: { sellPrice: 45, xp: 80 }, 
+            silage: { sellPrice: 50, xp: 60 }, fertilizer: { sellPrice: 30, xp: 50 } 
         };
         this.animalConfig = { chicken: { product: 'egg', time: 60000 }, cow: { product: 'milk', time: 120000 }, pig: { product: 'bacon', time: 90000 } };
         
@@ -61,7 +62,9 @@ class NebulaFarmPro {
                 this.currentUser = user; if (loginModal) loginModal.style.display = 'none';
                 if (loader) { loader.style.display = 'flex'; document.getElementById('loading-text').innerText = "BAIXANDO DADOS..."; }
                 this.initCloud(); 
-            } else { if (loader) loader.style.display = 'none'; if (loginModal) loginModal.style.display = 'flex'; }
+            } else {
+                if (loader) loader.style.display = 'none'; if (loginModal) loginModal.style.display = 'flex';
+            }
         });
         const btnGoogle = document.getElementById('btn-google-login'); if (btnGoogle) btnGoogle.addEventListener('click', () => { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.error(e)); });
         const btnLogout = document.getElementById('btn-logout'); if (btnLogout) btnLogout.addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
@@ -69,7 +72,9 @@ class NebulaFarmPro {
 
     initCloud() {
         if (!db || !this.currentUser) return this.startGame();
-        let hasStarted = false; const safetyTimeout = setTimeout(() => { if(!hasStarted) { hasStarted = true; this.startGame(); } }, 5000);
+        let hasStarted = false;
+        const safetyTimeout = setTimeout(() => { if(!hasStarted) { hasStarted = true; this.startGame(); } }, 5000);
+        
         db.collection("fazendas").doc(this.currentUser.uid).get().then((doc) => {
             if (hasStarted) return;
             if (doc.exists) {
@@ -82,7 +87,7 @@ class NebulaFarmPro {
                     if (!this.state.enclosures) this.state.enclosures = {};
                     if (!this.state.savedPlants) this.state.savedPlants = [];
                     if (!this.state.savedDecorations) this.state.savedDecorations = [];
-                } catch (err) { }
+                } catch (err) {}
             } else { this.saveToCloud(true); }
             hasStarted = true; clearTimeout(safetyTimeout); this.startGame();
         }).catch((e) => { if(!hasStarted) { hasStarted = true; clearTimeout(safetyTimeout); this.startGame(); } });
@@ -104,7 +109,7 @@ class NebulaFarmPro {
             this.updateUI();
             setInterval(() => { this.saveToCloud(true); }, 30000);
             requestAnimationFrame((time) => this.animate(time));
-        } catch (err) { console.error("Erro ao iniciar jogo:", err); }
+        } catch (err) { console.error("Erro Crítico ao Montar:", err); }
     }
 
     setupCore() {
@@ -153,11 +158,13 @@ class NebulaFarmPro {
         
         if (this.state.savedPlants) { 
             this.state.savedPlants.forEach(sp => { 
-                try { if (this.config[sp.type] && this.config[sp.type].isTree) { this.restoreTree(sp); } else { this.restoreCrop(sp); } } catch(e) {}
+                try { if (this.config[sp.type] && this.config[sp.type].isTree) { this.restoreTree(sp); } else { this.restoreCrop(sp); } } catch(e) {} 
             }); 
         }
         if (this.state.savedDecorations) { 
-            this.state.savedDecorations.forEach(sd => { try { this.placeDecoration(sd.type, sd.x, sd.z, false); } catch(e) {} }); 
+            this.state.savedDecorations.forEach(sd => { 
+                try { this.placeDecoration(sd.type, sd.x, sd.z, false); } catch(e) {} 
+            }); 
         }
 
         this.createNPC('Fazendeiro Zé', -10, 5, 0x2980b9, ["Belo dia para plantar!", "Cuidado com as vacas!"]);
@@ -229,7 +236,6 @@ class NebulaFarmPro {
         const roof = new THREE.Mesh(new THREE.ConeGeometry(7, 3.5, 4), roofMat); roof.position.y = 6.75; roof.rotation.y = Math.PI / 4; roof.castShadow = true;
         const doorMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: 0.8 });
         const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3.5, 0.2), doorMat); door.position.set(0, 1.75, 3.1); 
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.15), new THREE.MeshStandardMaterial({ color: 0xFFD700, metalness: 0.8 })); knob.position.set(0.6, 0, 0.15); door.add(knob); 
         const winMat = new THREE.MeshStandardMaterial({ color: 0x87CEEB, roughness: 0.1, metalness: 0.8 }); const winBorderMat = new THREE.MeshStandardMaterial({ color: 0x3e2723 }); 
         const criarJanela = (wx, wy, wz) => {
             const winGroup = new THREE.Group(); const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.5, 0.1), winMat);
@@ -348,6 +354,9 @@ class NebulaFarmPro {
         const f2 = new THREE.Mesh(geoH, new THREE.MeshStandardMaterial({color})); f2.position.set(x, 0.5, z + d/2);
         const f3 = new THREE.Mesh(geoV, new THREE.MeshStandardMaterial({color})); f3.position.set(x - w/2, 0.5, z);
         const f4 = new THREE.Mesh(geoV, new THREE.MeshStandardMaterial({color})); f4.position.set(x + w/2, 0.5, z);
+        
+        const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, d), new THREE.MeshStandardMaterial({color: 0x5d4037, transparent: true, opacity: 0.2}));
+        floor.position.set(x, 0.05, z); floor.userData = { isEnclosureFloor: true }; this.scene.add(floor); this.enclosureFloors.push(floor);
         this.scene.add(f1, f2, f3, f4);
     }
 
@@ -356,20 +365,17 @@ class NebulaFarmPro {
         const skinMat = new THREE.MeshStandardMaterial({color: 0xffccaa, roughness: 0.8});
         const shirtMat = new THREE.MeshStandardMaterial({color: color, roughness: 0.8});
         const pantsMat = new THREE.MeshStandardMaterial({color: 0x333333, roughness: 0.8});
-
         const head = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), skinMat); head.position.y = 3; head.castShadow = true; npcGroup.add(head);
         const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 0.6), shirtMat); body.position.y = 1.6; body.castShadow = true; npcGroup.add(body);
         const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.6, 0.4), skinMat); leftArm.position.set(-0.8, 1.6, 0); leftArm.castShadow = true; npcGroup.add(leftArm);
         const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.6, 0.4), skinMat); rightArm.position.set(0.8, 1.6, 0); rightArm.castShadow = true; npcGroup.add(rightArm);
         const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.5), pantsMat); leftLeg.position.set(-0.3, 0.8, 0); leftLeg.castShadow = true; npcGroup.add(leftLeg);
         const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.5), pantsMat); rightLeg.position.set(0.3, 0.8, 0); rightLeg.castShadow = true; npcGroup.add(rightLeg);
-
         if (name.includes("Zé") || name.includes("Tião")) {
              const hatBrim = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.2, 1.6), new THREE.MeshStandardMaterial({color: 0x8B4513})); hatBrim.position.y = 3.6; hatBrim.castShadow = true;
              const hatTop = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.8), new THREE.MeshStandardMaterial({color: 0x8B4513})); hatTop.position.y = 3.9; hatTop.castShadow = true;
              npcGroup.add(hatBrim, hatTop);
         }
-
         npcGroup.position.set(x, 0, z); npcGroup.scale.set(0.7, 0.7, 0.7); 
         npcGroup.children.forEach(c => { c.userData = { isNPC: true, parentRef: npcGroup }; }); this.scene.add(npcGroup);
         this.npcs.push({ mesh: npcGroup, name: name, speed: 0.05, target: new THREE.Vector3(x, 0, z), state: 'idle', timer: Math.random() * 200, phrases: phrases });
@@ -381,27 +387,18 @@ class NebulaFarmPro {
                 npc.timer--;
                 if (npc.timer <= 0) { 
                     npc.state = 'walking'; 
-                    if (npc.name.includes("Pescador")) {
-                        npc.target.set(24 + (Math.random() - 0.5) * 2, 0, 25 + (Math.random() - 0.5) * 4);
-                    } else {
+                    if (npc.name.includes("Pescador")) { npc.target.set(24 + (Math.random() - 0.5) * 2, 0, 25 + (Math.random() - 0.5) * 4); } 
+                    else {
                         let safeTarget = false; let rx, rz;
-                        while (!safeTarget) {
-                            rx = (Math.random() - 0.5) * 80; rz = (Math.random() - 0.5) * 80;
-                            if (Math.sqrt(Math.pow(rx - 35, 2) + Math.pow(rz - 25, 2)) > 16) { safeTarget = true; } 
-                        }
+                        while (!safeTarget) { rx = (Math.random() - 0.5) * 80; rz = (Math.random() - 0.5) * 80; if (Math.sqrt(Math.pow(rx - 35, 2) + Math.pow(rz - 25, 2)) > 16) { safeTarget = true; } }
                         npc.target.set(rx, 0, rz); 
                     }
                 }
             } else if (npc.state === 'walking') {
                 const dx = npc.target.x - npc.mesh.position.x; const dz = npc.target.z - npc.mesh.position.z; const dist = Math.sqrt(dx*dx + dz*dz);
-                if (Math.sqrt(Math.pow(npc.mesh.position.x - 35, 2) + Math.pow(npc.mesh.position.z - 25, 2)) < 14 && !npc.name.includes("Pescador")) {
-                    npc.state = 'idle'; npc.timer = 10;
-                } else if (dist < 1) { 
-                    npc.state = 'idle'; npc.timer = 100 + Math.random() * 300; 
-                } else { 
-                    npc.mesh.position.x += (dx / dist) * npc.speed; npc.mesh.position.z += (dz / dist) * npc.speed; 
-                    npc.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.015)) * 0.3; npc.mesh.rotation.y = Math.atan2(dx, dz);
-                }
+                if (Math.sqrt(Math.pow(npc.mesh.position.x - 35, 2) + Math.pow(npc.mesh.position.z - 25, 2)) < 14 && !npc.name.includes("Pescador")) { npc.state = 'idle'; npc.timer = 10; } 
+                else if (dist < 1) { npc.state = 'idle'; npc.timer = 100 + Math.random() * 300; } 
+                else { npc.mesh.position.x += (dx / dist) * npc.speed; npc.mesh.position.z += (dz / dist) * npc.speed; npc.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.015)) * 0.3; npc.mesh.rotation.y = Math.atan2(dx, dz); }
             }
         });
     }
@@ -493,85 +490,182 @@ class NebulaFarmPro {
         });
     }
 
+    createBird() {
+        const bird = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), new THREE.MeshStandardMaterial({color: 0x2980b9})); bird.add(body);
+        const pivot = new THREE.Group(); pivot.position.set((Math.random()-0.5)*100, 15 + Math.random()*5, (Math.random()-0.5)*100);
+        bird.position.set(10 + Math.random()*5, 0, 0); pivot.add(bird); this.scene.add(pivot);
+        this.animations.push(() => { pivot.rotation.y += 0.02; bird.position.y = Math.sin(Date.now() * 0.005) * 2; });
+    }
+
+    createTree(x, z) {
+        for(const obs of this.obstacles) { if (Math.sqrt(Math.pow(x - obs.x, 2) + Math.pow(z - obs.z, 2)) < obs.r + 3) return; }
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.8, 4, 0.8), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 2;
+        const leaves = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), new THREE.MeshStandardMaterial({color: 0x388e3c})); leaves.position.y = 5;
+        tree.add(trunk, leaves); tree.position.set(x, 0, z); this.scene.add(tree);
+    }
+
+    renderGrid() {
+        this.tiles.forEach(t => this.scene.remove(t)); this.tiles = []; const dirtMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 }); const offset = (this.state.gridSize * 3.5) / 2 - 1.75; 
+        for(let x=0; x<this.state.gridSize; x++) { 
+            for(let z=0; z<this.state.gridSize; z++) { 
+                const tile = new THREE.Mesh(new THREE.BoxGeometry(3.45, 0.5, 3.45), dirtMat); 
+                tile.position.set(x * 3.5 - offset, 0.25, z * 3.5 - offset); 
+                tile.receiveShadow = true; tile.userData = { isTile: true, occupied: false, tileRef: tile }; 
+                this.scene.add(tile); this.tiles.push(tile); 
+            } 
+        }
+    }
+
+    plant(tile, seedType) {
+        if (tile.userData.occupied || this.state.inventory[seedType] <= 0) return;
+        this.state.inventory[seedType]--; tile.userData.occupied = true;
+        const stalk = new THREE.Group();
+        if (seedType === 'wheat') {
+            const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0);
+            const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2);
+        } else if (seedType === 'carrot') {
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top);
+        } else if (seedType === 'corn') {
+            const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6;
+            const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob);
+        }
+        stalk.position.set(tile.position.x, 0.4, tile.position.z); stalk.traverse(c => { if(c.isMesh) c.userData = { isPlant: true, parentRef: stalk }; }); this.scene.add(stalk);
+        this.plants.push({ mesh: stalk, tile, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
+    }
+
+    restoreCrop(sp) {
+        let targetTile = null; let minDist = Infinity;
+        this.tiles.forEach(t => { if(!t.userData.occupied) { let dist = Math.sqrt(Math.pow(t.position.x - sp.x, 2) + Math.pow(t.position.z - sp.z, 2)); if (dist < minDist) { minDist = dist; targetTile = t; } } });
+        if (targetTile) { 
+            targetTile.userData.occupied = true; const stalk = new THREE.Group();
+            if (sp.type === 'wheat') { const s1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s1.position.set(-0.2, 0.4, 0); const s2 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1, 0.2), new THREE.MeshStandardMaterial({color: 0xf1c40f})); s2.position.set(0.2, 0.5, 0); stalk.add(s1, s2); } 
+            else if (sp.type === 'carrot') { const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xe67e22})); base.position.y = 0.25; const top = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.4, 0.2), new THREE.MeshStandardMaterial({color: 0x2ecc71})); top.position.y = 0.7; stalk.add(base, top); } 
+            else { const base = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.2, 0.3), new THREE.MeshStandardMaterial({color: 0x2ecc71})); base.position.y = 0.6; const cob = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), new THREE.MeshStandardMaterial({color: 0xf1c40f})); cob.position.set(0, 0.8, 0.1); stalk.add(base, cob); }
+            stalk.position.set(targetTile.position.x, 0.4, targetTile.position.z); stalk.traverse(c => { if(c.isMesh) c.userData = { isPlant: true, parentRef: stalk }; }); this.scene.add(stalk);
+            this.plants.push({ mesh: stalk, tile: targetTile, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
+        }
+    }
+
+    plantTree(point, seedType) {
+        let hasCollision = false;
+        for (const obs of this.obstacles) { if (Math.sqrt(Math.pow(point.x - obs.x, 2) + Math.pow(point.z - obs.z, 2)) < (obs.r + 2)) { hasCollision = true; break; } }
+        if (hasCollision) { this.spawnFX(window.innerWidth / 2, window.innerHeight / 2, "❌ LOCAL INVÁLIDO!", "#F44336"); return; }
+        if (this.state.inventory[seedType] <= 0) return;
+        this.state.inventory[seedType]--; const conf = this.config[seedType];
+        const mesh = new THREE.Group(); const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
+        const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
+        mesh.add(trunk, leaves); mesh.position.set(point.x, 0, point.z); mesh.traverse(c => { if(c.isMesh) c.userData = { isPlant: true, parentRef: mesh }; }); this.scene.add(mesh);
+        this.plants.push({ mesh: mesh, type: seedType, plantedAt: Date.now(), progress: 0 }); this.updateUI(); this.saveToCloud(true);
+    }
+
+    restoreTree(sp) {
+        const conf = this.config[sp.type]; const mesh = new THREE.Group(); 
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.5, 0.4), new THREE.MeshStandardMaterial({color: 0x5d4037})); trunk.position.y = 0.75;
+        const leaves = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshStandardMaterial({color: conf.leafColor})); leaves.position.y = 2;
+        mesh.add(trunk, leaves); mesh.position.set(sp.x, 0, sp.z); mesh.traverse(c => { if(c.isMesh) c.userData = { isPlant: true, parentRef: mesh }; }); this.scene.add(mesh);
+        this.plants.push({ mesh: mesh, type: sp.type, plantedAt: sp.plantedAt, progress: 0 });
+    }
+
+    harvestPlant(mesh, x, y) {
+        let targetMesh = mesh; if (mesh.parent && mesh.parent.type === "Group") targetMesh = mesh.parent;
+        const idx = this.plants.findIndex(p => p.mesh === targetMesh); if (idx === -1) return;
+        const p = this.plants[idx]; if (p.progress < 1) return;
+        const conf = this.config[p.type]; 
+        if (this.state.siloCount + conf.yield > this.state.maxSilo) { this.spawnFX(x, y, "SILO CHEIO!", "#F44336"); return; }
+        this.state.inventory[p.type] += conf.yield; this.state.siloCount += conf.yield; this.state.xp += conf.xp;
+        if (conf.isTree) { p.progress = 0; p.plantedAt = Date.now(); p.mesh.children[1].material.color.setHex(conf.leafColor); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); } 
+        else { p.tile.userData.occupied = false; if(typeof TWEEN !== 'undefined') { new TWEEN.Tween(p.mesh.scale).to({x:0,y:0,z:0}, 200).onComplete(()=>this.scene.remove(p.mesh)).start(); } else { this.scene.remove(p.mesh); } this.plants.splice(idx, 1); this.spawnFX(x, y, `+${conf.yield} ${p.type.toUpperCase()}`, "#FFF"); }
+        this.checkLevel(); this.updateUI(); this.saveToCloud(true);
+    }
+
     // ==========================================
-    // 7. O RADAR DE CLIQUES (SÊNIOR E À PROVA DE FALHAS)
+    // 8. O RADAR DE CLIQUES NATIVO (100% BLINDADO)
     // ==========================================
     setupInteractions() {
-        const raycaster = new THREE.Raycaster(); 
-        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
         
-        window.addEventListener('pointerdown', (e) => {
-            // Se clicou na Interface HTML, ignora o jogo 3D.
-            if (e.target.closest('.game-header') || e.target.closest('.side-panel') || e.target.closest('.modal-content') || e.target.closest('.bubble-item') || e.target.closest('.login-box')) return;
+        // 1. REGISTRA O CLIQUE EXCLUSIVAMENTE NO CANVAS 3D
+        this.renderer.domElement.addEventListener('pointerdown', (e) => {
+            this.isPanning = false; 
+            this.panStart = { x: e.clientX, y: e.clientY }; 
             
+            const bubble = document.getElementById('bubble-menu'); 
+            if (bubble && bubble.style.display === 'flex') { this.hideBubble(); }
+        });
+
+        this.renderer.domElement.addEventListener('pointermove', (e) => {
+            if (this.placementMode || this.tractor.isDriving) return; 
+            
+            // SENSIBILIDADE CORRIGIDA PARA CELULAR: Movimentos maiores que 15px são "Arrastar Câmera"
+            const dx = e.clientX - this.panStart.x; 
+            const dy = e.clientY - this.panStart.y;
+            if (Math.abs(dx) > 15 || Math.abs(dy) > 15) { 
+                this.isPanning = true; 
+                this.hideBubble();
+                
+                const f = 0.08; 
+                let newX = this.camera.position.x - (dx * f) - (dy * f); 
+                let newZ = this.camera.position.z + (dx * f) - (dy * f);
+                this.camera.position.x = Math.max(-60, Math.min(100, newX)); 
+                this.camera.position.z = Math.max(-60, Math.min(100, newZ));
+                this.panStart = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        // 2. SOLTOU O DEDO? SE NÃO ARRASTOU A CÂMERA, ENTÃO FOI UM CLIQUE VÁLIDO!
+        this.renderer.domElement.addEventListener('pointerup', (e) => { 
+            if (this.placementMode || this.isPanning) return; 
+            
+            const mouse = new THREE.Vector2();
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1; 
             mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; 
             raycaster.setFromCamera(mouse, this.camera);
-            
-            const bubble = document.getElementById('bubble-menu'); 
-            if (bubble && bubble.style.display === 'flex') { this.hideBubble(); return; }
 
-            this.isPanning = true; 
-            this.panStart = { x: e.clientX, y: e.clientY }; 
-            this.hasPanned = false; 
-            this.pendingBubble = null;
-
-            // REGRAS DE CLIQUE ESTRITAS (Hierarquia de Prioridade)
+            // A MURALHA DE AÇO: ORDEM EXATA DE LEITURA (A Horta tem prioridade sobre a grama)
             
-            // 1. Clicou nos Tiles (Horta)
+            // Tenta Horta
             const hitsTiles = raycaster.intersectObjects(this.tiles);
             if (hitsTiles.length > 0) {
                 const tile = hitsTiles[0].object;
-                if (!tile.userData.occupied) {
-                    this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_crop', hitObj: tile };
-                }
-                return; // O CLIQUE MORRE AQUI SE FOR NA TERRA ARADA! NÃO VAZA PRA GRAMA!
+                if (!tile.userData.occupied) { this.showBubble(e.clientX, e.clientY, 'plant_crop', { obj: tile }); }
+                return; // O CLIQUE MORRE AQUI NA HORTA. A ÁRVORE NUNCA VAI SER OFERECIDA.
             }
 
-            // 2. Clicou em Plantas Crescidas
+            // Tenta Plantas para Colher
             const plantMeshes = this.plants.flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
             const hitsP = raycaster.intersectObjects(plantMeshes);
             if (hitsP.length > 0) {
                 const pObj = hitsP[0].object.userData.parentRef || hitsP[0].object.parent;
                 const plantData = this.plants.find(p => p.mesh === pObj);
-                if (plantData && plantData.progress >= 1) {
-                    this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'harvest_plant', hitObj: pObj };
-                }
+                if (plantData && plantData.progress >= 1) { this.showBubble(e.clientX, e.clientY, 'harvest_plant', { obj: pObj }); }
                 return;
             }
 
-            // 3. Clicou em Fábricas
+            // Tenta Fábricas
             const factoryMeshes = []; this.factories.forEach(f => factoryMeshes.push(...f.mesh.children));
             const hitsF = raycaster.intersectObjects(factoryMeshes);
             if (hitsF.length > 0) {
                 const fac = this.factories.find(f => f.mesh === hitsF[0].object.userData.parentRef);
-                if (fac) { this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: fac.state === 'idle' ? fac.type + '_idle' : fac.type + '_ready', hitObj: fac.mesh }; }
+                if (fac) { this.showBubble(e.clientX, e.clientY, fac.state === 'idle' ? fac.type + '_idle' : fac.type + '_ready', { obj: fac.mesh }); }
                 return;
             }
 
-            // 4. Clicou em Animais
+            // Tenta Animais ou Cercados
             const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
-            const hitsA = raycaster.intersectObjects(animalMeshes);
-            if (hitsA.length > 0) {
-                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'animal_actions' };
-                return;
-            }
-
-            // 5. Clicou no Lago
-            if (this.lake && raycaster.intersectObject(this.lake).length > 0) { 
-                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'fish' }; 
+            if (raycaster.intersectObjects(animalMeshes).length > 0 || raycaster.intersectObjects(this.enclosureFloors).length > 0) { 
+                let hitA = raycaster.intersectObjects(animalMeshes)[0];
+                let obj = hitA ? hitA.object.userData.parentRef : null;
+                this.showBubble(e.clientX, e.clientY, 'animal_actions', { obj: obj }); 
                 return; 
             }
 
-            // 6. Clicou no Trator
-            if (this.tractor.mesh && raycaster.intersectObjects(this.tractor.mesh.children).length > 0) { 
-                this.tractor.isDriving = true; 
-                document.getElementById('driving-alert').style.display = 'block'; 
-                this.isPanning = false; 
-                return; 
-            }
+            // Tenta Lago
+            if (this.lake && raycaster.intersectObject(this.lake).length > 0) { this.showBubble(e.clientX, e.clientY, 'fish'); return; }
 
-            // 7. Clicou nos NPCs
+            // Tenta NPCs
             const npcMeshes = []; this.npcs.forEach(n => npcMeshes.push(...n.mesh.children));
             const hitsNPC = raycaster.intersectObjects(npcMeshes);
             if (hitsNPC.length > 0) { 
@@ -580,138 +674,72 @@ class NebulaFarmPro {
                 return; 
             }
 
-            // 8. Se não bateu em nada acima, sobrou a GRAMA (Para plantar árvores)
+            // Tenta Trator
+            if (this.tractor.mesh && raycaster.intersectObjects(this.tractor.mesh.children).length > 0) { 
+                this.tractor.isDriving = true; document.getElementById('driving-alert').style.display = 'block'; return; 
+            }
+
+            // SOBROU A GRAMA (ÁRVORE)
             const hitsGrass = raycaster.intersectObject(this.grass);
-            if (hitsGrass.length > 0) { 
-                this.pendingBubble = { x: e.clientX, y: e.clientY, ctx: 'plant_tree', hitPoint: hitsGrass[0].point }; 
-            }
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (this.placementMode || this.tractor.isDriving) return; 
-            if (this.isDragging && this.activeDragTool) { 
-                mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; raycaster.setFromCamera(mouse, this.camera); 
-                this.applyDragTool(raycaster, e.clientX, e.clientY); 
-            } else if (this.isPanning) {
-                const moveX = e.clientX - this.panStart.x; const moveY = e.clientY - this.panStart.y;
-                // SENSIBILIDADE AUMENTADA (Menos cliques falhos)
-                if (Math.abs(moveX) > 20 || Math.abs(moveY) > 20) { 
-                    this.hasPanned = true; this.pendingBubble = null; const f = 0.08; 
-                    let newX = this.camera.position.x - (moveX * f) - (moveY * f); let newZ = this.camera.position.z + (moveX * f) - (moveY * f);
-                    this.camera.position.x = Math.max(-60, Math.min(100, newX)); this.camera.position.z = Math.max(-60, Math.min(100, newZ));
-                    this.panStart = { x: e.clientX, y: e.clientY };
-                }
-            }
-        });
-
-        window.addEventListener('pointerup', () => { 
-            if (this.placementMode) return; 
-            this.isPanning = false; 
-            if (this.activeDragTool) { 
-                this.isDragging = false; this.activeDragTool = null; this.hideBubble(); 
-            } else if (!this.hasPanned && this.pendingBubble) { 
-                this.showBubble(this.pendingBubble.x, this.pendingBubble.y, this.pendingBubble.ctx, this.pendingBubble); 
-            } 
+            if (hitsGrass.length > 0) { this.showBubble(e.clientX, e.clientY, 'plant_tree', { point: hitsGrass[0].point }); return; }
         });
 
         window.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.tractor.isDriving) { this.tractor.isDriving = false; document.getElementById('driving-alert').style.display = 'none'; } });
     }
 
-    showBubble(x, y, context, pendingData) {
+    // MENU DE BOLHAS ESTÁVEL E COM NATIVE ONCLICK
+    showBubble(x, y, context, targetData = null) {
         const bubble = document.getElementById('bubble-menu'); if (!bubble) return;
         bubble.style.left = x + 'px'; bubble.style.top = y + 'px'; bubble.style.display = 'flex'; bubble.innerHTML = '';
+        
+        this.currentTargetData = { x: x, y: y, ...targetData, ctx: context }; // Salva na memória o que foi clicado
 
+        let html = '';
         if (context === 'plant_crop') {
-            if(this.state.unlocked.wheat) bubble.innerHTML += this.createBubbleItem('wheat', '🌾', this.state.inventory.wheat);
-            if(this.state.unlocked.carrot) bubble.innerHTML += this.createBubbleItem('carrot', '🥕', this.state.inventory.carrot);
-            if(this.state.unlocked.corn) bubble.innerHTML += this.createBubbleItem('corn', '🌽', this.state.inventory.corn);
+            html += this.createBubbleItem('wheat', '🌾', this.state.inventory.wheat);
+            html += this.createBubbleItem('carrot', '🥕', this.state.inventory.carrot);
+            html += this.createBubbleItem('corn', '🌽', this.state.inventory.corn);
         } else if (context === 'plant_tree') {
-            if(this.state.unlocked.apple) bubble.innerHTML += this.createBubbleItem('apple', '🌳', this.state.inventory.apple);
-            if(this.state.unlocked.orange) bubble.innerHTML += this.createBubbleItem('orange', '🍊', this.state.inventory.orange);
-        } else if (context === 'harvest_plant') { bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR');
-        } else if (context === 'animal_actions') { bubble.innerHTML += this.createBubbleItem('harvest', '✂️', 'CORTAR'); bubble.innerHTML += this.createBubbleItem('feed', '🥣', this.state.inventory.feed);
-        } else if (context === 'fish') { bubble.innerHTML += this.createBubbleItem('fish', '🎣', '1🌽');
-        } else if (context === 'bakery_idle') { const canBake = this.state.inventory.wheat >= 3 ? this.state.inventory.wheat : 0; bubble.innerHTML += this.createBubbleItem('bake_bread', '🌾', '-3🌾', canBake === 0);
-        } else if (context === 'bakery_ready') { bubble.innerHTML += this.createBubbleItem('collect_bread', '🍞', 'PEGAR');
-        } else if (context === 'dairy_idle') { const canMakeCheese = this.state.inventory.milk >= 2 ? this.state.inventory.milk : 0; bubble.innerHTML += this.createBubbleItem('make_cheese', '🥛', '-2🥛', canMakeCheese === 0);
-        } else if (context === 'dairy_ready') { bubble.innerHTML += this.createBubbleItem('collect_cheese', '🧀', 'PEGAR');
-        } else if (context === 'trench_idle') { const canMakeSilage = this.state.inventory.corn >= 2 ? this.state.inventory.corn : 0; bubble.innerHTML += this.createBubbleItem('make_silage', '🌽', '-2🌽', canMakeSilage === 0);
-        } else if (context === 'trench_ready') { bubble.innerHTML += this.createBubbleItem('collect_silage', '🚜', 'PEGAR');
-        } else if (context === 'recycler_idle') { const canRecycle = this.state.inventory.junk >= 2 ? this.state.inventory.junk : 0; bubble.innerHTML += this.createBubbleItem('recycle', '🥾', '-2 Lixo', canRecycle === 0);
-        } else if (context === 'recycler_ready') { bubble.innerHTML += this.createBubbleItem('collect_fertilizer', '🧪', 'PEGAR'); }
+            html += this.createBubbleItem('apple', '🌳', this.state.inventory.apple);
+            html += this.createBubbleItem('orange', '🍊', this.state.inventory.orange);
+        } else if (context === 'harvest_plant') { html += this.createBubbleItem('harvest', '✂️', 'CORTAR');
+        } else if (context === 'animal_actions') { html += this.createBubbleItem('harvest', '✂️', 'CORTAR'); html += this.createBubbleItem('feed', '🥣', this.state.inventory.feed);
+        } else if (context === 'fish') { html += this.createBubbleItem('fish', '🎣', '1🌽');
+        } else if (context === 'bakery_idle') { html += this.createBubbleItem('bake_bread', '🌾', '-3🌾', this.state.inventory.wheat < 3);
+        } else if (context === 'bakery_ready') { html += this.createBubbleItem('collect_bread', '🍞', 'PEGAR');
+        } else if (context === 'dairy_idle') { html += this.createBubbleItem('make_cheese', '🥛', '-2🥛', this.state.inventory.milk < 2);
+        } else if (context === 'dairy_ready') { html += this.createBubbleItem('collect_cheese', '🧀', 'PEGAR');
+        } else if (context === 'trench_idle') { html += this.createBubbleItem('make_silage', '🌽', '-2🌽', this.state.inventory.corn < 2);
+        } else if (context === 'trench_ready') { html += this.createBubbleItem('collect_silage', '🚜', 'PEGAR');
+        } else if (context === 'recycler_idle') { html += this.createBubbleItem('recycle', '🥾', '-2 Lixo', this.state.inventory.junk < 2);
+        } else if (context === 'recycler_ready') { html += this.createBubbleItem('collect_fertilizer', '🧪', 'PEGAR'); }
 
-        document.querySelectorAll('.bubble-item').forEach(item => {
-            if (!item.classList.contains('locked')) {
-                item.addEventListener('pointerdown', (e) => { 
-                    e.preventDefault(); e.stopPropagation();
-                    this.activeDragTool = e.currentTarget.dataset.tool; 
-                    this.isDragging = true; 
-                    
-                    if (pendingData) {
-                        if (['wheat', 'carrot', 'corn'].includes(this.activeDragTool) && pendingData.hitObj) { 
-                            this.plant(pendingData.hitObj, this.activeDragTool); 
-                        } else if (['apple', 'orange'].includes(this.activeDragTool) && pendingData.hitPoint) { 
-                            this.plantTree(pendingData.hitPoint, this.activeDragTool); 
-                        } else if (this.activeDragTool === 'harvest' && pendingData.ctx === 'harvest_plant') { 
-                            this.harvestPlant(pendingData.hitObj, pendingData.x, pendingData.y); 
-                        } else if (this.activeDragTool === 'harvest' && pendingData.ctx === 'animal_actions') { 
-                            // Lógica de colher e arrastar no drag
-                        } else if (this.activeDragTool === 'feed') { 
-                            // Lógica de alimentar e arrastar
-                        } else if (this.activeDragTool === 'fish') { 
-                            this.startFishing(pendingData.x, pendingData.y); 
-                        } else if (['bake_bread', 'make_cheese', 'make_silage', 'recycle'].includes(this.activeDragTool)) { 
-                            this.startFactory(pendingData.hitObj, this.activeDragTool, pendingData.x, pendingData.y); 
-                        } else if (['collect_bread', 'collect_cheese', 'collect_silage', 'collect_fertilizer'].includes(this.activeDragTool)) { 
-                            this.collectFactory(pendingData.hitObj, pendingData.x, pendingData.y); 
-                        }
-                    }
-                    this.hideBubble(); this.updateUI();
-                });
-            }
-        });
+        bubble.innerHTML = html;
     }
 
-    createBubbleItem(tool, icon, textOverride, forceLock = false) { const lockedClass = forceLock || (typeof textOverride === 'number' && textOverride <= 0) ? 'locked' : ''; return `<div class="bubble-item ${lockedClass}" data-tool="${tool}">${icon}<small>${textOverride}</small></div>`; }
+    createBubbleItem(tool, icon, textOverride, forceLock = false) { 
+        const lockedClass = forceLock || (typeof textOverride === 'number' && textOverride <= 0) ? 'locked' : ''; 
+        // O NATIVE ONCLICK RESOLVE TODOS OS BUGS DO CELULAR DE UMA VEZ
+        return `<div class="bubble-item ${lockedClass}" onclick="gameInstance.executeAction('${tool}')">${icon}<small>${textOverride}</small></div>`; 
+    }
+    
     hideBubble() { const b = document.getElementById('bubble-menu'); if (b) b.style.display = 'none'; }
 
-    applyDragTool(raycaster, x, y) {
-        if (['bake_bread', 'make_cheese', 'make_silage', 'recycle'].includes(this.activeDragTool)) return;
-        if (['collect_bread', 'collect_cheese', 'collect_silage', 'collect_fertilizer'].includes(this.activeDragTool)) return;
+    // EXECUÇÃO DO TOQUE NATIVO HTML
+    executeAction(tool) {
+        if (!this.currentTargetData) { this.hideBubble(); return; }
+        const pd = this.currentTargetData;
 
-        if (this.activeDragTool === 'harvest') {
-            const plantMeshes = this.plants.flatMap(p => p.mesh.type === 'Group' ? p.mesh.children : [p.mesh]);
-            const hitsP = raycaster.intersectObjects(plantMeshes); 
-            if (hitsP.length > 0) { const pObj = hitsP[0].object.userData.parentRef || hitsP[0].object.parent; this.harvestPlant(pObj, x, y); return; }
-            
-            const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
-            const hitsA = raycaster.intersectObjects(animalMeshes); 
-            if (hitsA.length > 0) { const aObj = hitsA[0].object.userData.parentRef; this.harvestAnimal(aObj, x, y); return; }
-            return;
-        } 
+        if (['wheat', 'carrot', 'corn'].includes(tool) && pd.obj) { this.plant(pd.obj, tool); } 
+        else if (['apple', 'orange'].includes(tool) && pd.point) { this.plantTree(pd.point, tool); } 
+        else if (tool === 'harvest' && pd.ctx === 'harvest_plant') { this.harvestPlant(pd.obj, pd.x, pd.y); } 
+        else if (tool === 'harvest' && pd.ctx === 'animal_actions') { this.harvestAnimal(pd.obj, pd.x, pd.y); } 
+        else if (tool === 'feed') { this.feedAnimal(pd.obj, pd.x, pd.y); } 
+        else if (tool === 'fish') { this.startFishing(pd.x, pd.y); } 
+        else if (['bake_bread', 'make_cheese', 'make_silage', 'recycle'].includes(tool)) { this.startFactory(pd.obj, tool, pd.x, pd.y); } 
+        else if (['collect_bread', 'collect_cheese', 'collect_silage', 'collect_fertilizer'].includes(tool)) { this.collectFactory(pd.obj, pd.x, pd.y); }
         
-        if (this.activeDragTool === 'feed') {
-            const animalMeshes = []; this.animals.forEach(a => animalMeshes.push(...a.mesh.children));
-            const hitsA = raycaster.intersectObjects(animalMeshes); 
-            if (hitsA.length > 0) { const aObj = hitsA[0].object.userData.parentRef; this.feedAnimal(aObj, x, y); }
-            return;
-        } 
-        
-        if (this.activeDragTool === 'fish') return;
-
-        const seedType = this.activeDragTool;
-        if (this.config[seedType]) {
-            if (this.config[seedType].isTree) { 
-                const hitsTiles = raycaster.intersectObjects(this.tiles);
-                if (hitsTiles.length === 0) { 
-                    const hitsGrass = raycaster.intersectObject(this.grass); 
-                    if (hitsGrass.length > 0 && Date.now() - this.lastTreePlantTime > 400) { this.plantTree(hitsGrass[0].point, seedType); this.lastTreePlantTime = Date.now(); }
-                }
-            } else { 
-                const hitsTiles = raycaster.intersectObjects(this.tiles); 
-                if (hitsTiles.length > 0 && !hitsTiles[0].object.userData.occupied) { this.plant(hitsTiles[0].object, seedType); } 
-            }
-        }
+        this.hideBubble(); this.updateUI();
     }
 
     startFactory(factoryMesh, tool, x, y) {
@@ -740,7 +768,7 @@ class NebulaFarmPro {
         if (!anim || anim.state !== 'hungry' || this.state.inventory.feed <= 0) return;
         this.state.inventory.feed--; anim.state = 'producing'; anim.produceTimer = Date.now(); anim.timer = 0;
         if (typeof TWEEN !== 'undefined') { new TWEEN.Tween(anim.mesh.scale).to({x: 1, y: 1, z: 1}, 300).easing(TWEEN.Easing.Bounce.Out).start(); }
-        this.spawnFX(x, y, "❤️", "#F44336"); this.updateUI(); this.saveToCloud(true);
+        this.spawnFX(x, y, "❤️", "#F44336"); this.saveToCloud(true);
     }
 
     harvestAnimal(animalGroup, x, y) {
@@ -927,7 +955,7 @@ class NebulaFarmPro {
 
             this.renderer.render(this.scene, this.camera);
         } catch (e) {
-            console.error("ESCUDO ATIVADO. Erro na renderização ignorado:", e);
+            console.error("ESCUDO ATIVADO. Erro na renderização ignorado.");
         }
     }
 }
