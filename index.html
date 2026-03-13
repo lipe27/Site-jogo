@@ -2,13 +2,109 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nebula Farm | Site PC</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nebula Farm | O Jogo Definitivo</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ESTILOS ROCKSTAR INTEGRADOS */
+        body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Montserrat', sans-serif; background: #87CEEB; user-select: none; touch-action: none; }
+        
+        #loader { position: fixed; inset: 0; background: #0B1D3A; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 99999; color: white; transition: opacity 0.5s; }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: #4CAF50; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 20000; display: flex; align-items: center; justify-content: center; flex-direction: column; pointer-events: auto; }
+        .login-box { background: #fdf6e3; padding: 30px; border-radius: 20px; border: 5px solid #d4a373; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 85%; max-width: 350px; }
+        .login-box h2 { color: #388e3c; margin-top: 0; font-size: 24px; font-weight: 900; }
+        .login-box p { color: #5d4037; font-weight: bold; margin-bottom: 30px; font-size: 14px;}
+        .google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; background: white; color: #757575; border: none; padding: 12px 20px; border-radius: 30px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); width: 100%; transition: transform 0.2s;}
+        .google-btn:hover { transform: scale(1.05); }
+
+        /* MURALHA DE CLIQUES: A UI NÃO ATRAPALHA O JOGO */
+        #game-ui { position: absolute; inset: 0; pointer-events: none; }
+        .interactive { pointer-events: auto; }
+        
+        .game-header { position: absolute; top: 15px; left: 15px; width: calc(100vw - 30px); display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; }
+        .left-section, .center-section, .right-section { display: flex; gap: 10px; align-items: flex-start; }
+
+        .user-stats { background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 20px; color: white; display: flex; flex-direction: column; gap: 5px; border: 2px solid #a5d6a7; min-width: 100px; position: relative; }
+        .lvl-badge { font-weight: 900; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+        .xp-container { width: 100%; background: #333; border-radius: 10px; height: 10px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+        .xp-fill { height: 100%; background: linear-gradient(90deg, #4CAF50, #81c784); width: 0%; transition: width 0.3s; }
+        
+        #mission-alert { position: absolute; right: -15px; top: -15px; background: #e74c3c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 0 15px rgba(231, 76, 60, 0.8); animation: pulse-alert 1.5s infinite; border: 2px solid white;}
+        @keyframes pulse-alert { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .hidden { display: none !important; }
+
+        .btn-save, .btn-logout { border: none; padding: 10px 20px; border-radius: 30px; font-weight: 900; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s; color: white;}
+        .btn-save { background: linear-gradient(180deg, #42a5f5, #1e88e5); text-shadow: 1px 1px 0 #0d47a1; border: 2px solid #90caf9;} 
+        .btn-logout { background: linear-gradient(180deg, #ef5350, #e53935); text-shadow: 1px 1px 0 #b71c1c; border: 2px solid #ef9a9a;}
+        .btn-save:hover, .btn-logout:hover { transform: scale(1.05); }
+        
+        #weather-indicator { background: rgba(255,255,255,0.9); padding: 10px 15px; border-radius: 20px; font-weight: 900; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .weather-clear { color: #f39c12; } .weather-rain { color: #2980b9; }
+        .coin-pill { background: linear-gradient(180deg, #FFF176, #FFD54F); color: #b71c1c; padding: 10px 20px; border-radius: 30px; font-weight: 900; font-size: 16px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        .side-panel { position: absolute; left: 15px; bottom: 15px; z-index: 50; display: flex; flex-direction: column; gap: 10px;}
+        .silo-status { background: rgba(0, 0, 0, 0.8); padding: 10px 15px; border-radius: 20px; border: 2px solid #d4a373; color: white; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-align: center;}
+        .btn-market { background: linear-gradient(180deg, #66bb6a, #43a047); color: white; text-shadow: 1px 1px 0 #1b5e20; border: 3px solid white; padding: 15px 25px; border-radius: 30px; font-weight: 900; font-size: 16px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s;}
+        .btn-market:hover { transform: scale(1.05); }
+
+        /* BOLHA DO DRAG AND DROP */
+        #bubble-menu { position: absolute; display: none; gap: 12px; transform: translate(-50%, -100%); margin-top: -30px; z-index: 10000; }
+        .bubble-item { width: 65px; height: 65px; background: #fff; border: 4px solid #3498db; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 26px; cursor: grab; box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: transform 0.1s; }
+        .bubble-item:active { cursor: grabbing; transform: scale(0.95); background: #e3f2fd; }
+        .bubble-item small { font-size: 12px; font-weight: 900; color: #333; margin-top: -2px; }
+        .bubble-item.locked { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; border-color: #7f8c8d; }
+
+        .floating-feedback { position: absolute; font-weight: 900; font-size: 22px; text-shadow: 2px 2px 0 #000; animation: floatUp 1s forwards; pointer-events: none; z-index: 2000; transform: translate(-50%, -50%); white-space: nowrap; }
+        @keyframes floatUp { 0% { opacity: 1; margin-top: 0; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; margin-top: -100px; transform: translate(-50%, -50%) scale(1.2); } }
+
+        /* MODAIS RESTAURADOS E BONITOS */
+        .modal-hidden { display: none !important; }
+        #market-modal, #mission-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); z-index: 10000; display: flex; justify-content: center; align-items: center; padding: 15px;}
+        .modal-content { background: #fdf6e3; width: 100%; max-width: 850px; height: 90vh; max-height: 800px; border-radius: 20px; border: 5px solid #d4a373; padding: 25px; display: flex; flex-direction: column; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .mission-content { max-width: 350px; height: auto; text-align: center; }
+        .close-btn { position: absolute; top: -15px; right: -15px; width: 45px; height: 45px; background: #e74c3c; color: white; border: none; border-radius: 50%; font-weight: 900; font-size: 22px; cursor: pointer; border: 3px solid white; z-index: 10; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.3);}
+        .close-btn:hover { transform: scale(1.1); background: #c0392b; }
+
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #d4a373; padding-bottom: 15px; margin-bottom: 15px; flex-shrink: 0; }
+        .modal-header h2 { margin: 0; color: #388e3c; font-size: 26px; text-transform: uppercase; }
+        .market-balance { background: #FFD700; padding: 10px 20px; border-radius: 30px; font-weight: 900; color: #b71c1c; border: 2px solid white; font-size: 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);}
+
+        .market-grid { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding-right: 10px; }
+        .market-grid::-webkit-scrollbar { width: 10px; }
+        .market-grid::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 5px; }
+        
+        .market-section { background: rgba(255,255,255,0.7); padding: 20px; border-radius: 15px; border: 2px dashed #bdc3c7; }
+        .market-section h3 { margin-top: 0; color: #5d4037; font-size: 20px; text-align: center; margin-bottom: 20px; text-transform: uppercase;}
+        .sell-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px;}
+
+        .market-item { display: flex; flex-direction: column; align-items: center; justify-content: space-between; background: white; border: 3px solid #a5d6a7; padding: 15px; border-radius: 15px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.2s, border-color 0.2s; min-height: 90px;}
+        .market-item:hover { transform: translateY(-5px); border-color: #388e3c; box-shadow: 0 8px 15px rgba(0,0,0,0.2);}
+        .mkt-name { font-size: 16px; font-weight: 900; color: #333; text-align: center;}
+        .mkt-qty { font-size: 13px; color: #7f8c8d; font-weight: 700; margin-top: 5px;}
+        .mkt-price { color: #388e3c; font-size: 20px; font-weight: 900; margin-top: 8px; background: #e8f5e9; padding: 2px 10px; border-radius: 10px;}
+        .buy-seed { border-color: #3498db; } .buy-seed:hover { border-color: #2980b9; }
+        .upgrade { border-color: #9b59b6; } .upgrade:hover { border-color: #8e44ad; }
+
+        .mission-desc { font-weight: bold; color: #5d4037; font-size: 20px; margin: 20px 0;}
+        .mission-reward { font-size: 26px; font-weight: 900; color: #2ecc71; margin-bottom: 25px; }
+        #btn-mission { width: 100%; background: linear-gradient(180deg, #4CAF50, #388e3c); color: white; border: 2px solid white; padding: 15px; border-radius: 30px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: transform 0.2s;}
+        #btn-mission:hover:not(:disabled) { transform: scale(1.05); }
+        #btn-mission:disabled { background: #95a5a6; cursor: not-allowed; color: #ddd; border-color: #ccc;}
+
+        #placement-ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; z-index: 100; }
+        .place-btn { border: 2px solid white; padding: 15px 40px; border-radius: 30px; font-weight: 900; font-size: 18px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.4); color: white; transition: transform 0.2s;}
+        .place-btn:hover { transform: scale(1.05); }
+        .place-btn.cancel { background: linear-gradient(180deg, #e74c3c, #c0392b); } 
+        .place-btn.confirm { background: linear-gradient(180deg, #2ecc71, #27ae60); }
+        
+        .driving-alert { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #e74c3c; color: white; padding: 12px 25px; border-radius: 30px; font-weight: 900; font-size: 18px; z-index: 1000; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.4);}
+    </style>
 </head>
 <body>
-    <div id="loader"><div class="spinner"></div><p id="loading-text">VERIFICANDO CONTA...</p></div>
+    <div id="loader"><div class="spinner"></div><p id="loading-text">CRIANDO O MUNDO...</p></div>
 
     <div id="login-modal" style="display: none;">
         <div class="login-box">
@@ -21,42 +117,41 @@
         </div>
     </div>
 
-    <main id="game-ui" style="display: none; pointer-events: none;">
-        <div id="driving-alert" class="driving-alert">🚜 PILOTANDO! Clique no chão para andar.</div>
+    <main id="game-ui" style="display: none;">
+        <div id="driving-alert" class="driving-alert interactive">🚜 PILOTANDO! Clique no chão para andar.</div>
 
         <header class="game-header">
             <div class="left-section">
-                <div class="user-stats" style="pointer-events: auto;">
+                <div class="user-stats interactive">
                     <div class="lvl-badge">LVL <span id="lvl">1</span></div>
                     <div class="xp-container"><div id="xp-bar" class="xp-fill"></div></div>
                     <div id="mission-alert" class="hidden" onclick="gameInstance.openMissionModal()">❗️</div>
                 </div>
             </div>
             <div class="center-section">
-                <button onclick="gameInstance.saveToCloud(false)" class="btn-save" style="pointer-events: auto;">💾 SALVAR</button>
-                <button id="btn-logout" class="btn-logout" style="pointer-events: auto;">🚪 SAIR</button>
+                <button onclick="gameInstance.saveToCloud(false)" class="btn-save interactive">💾 SALVAR</button>
+                <button id="btn-logout" class="btn-logout interactive">🚪 SAIR</button>
             </div>
             <div class="right-section">
-                <div id="weather-indicator" class="weather-clear" style="pointer-events: auto;">☀️ ENSOLARADO</div>
-                <div class="coin-pill" style="pointer-events: auto;">💰 $<span id="money">1000</span></div>
+                <div id="weather-indicator" class="weather-clear interactive">☀️ ENSOLARADO</div>
+                <div class="coin-pill interactive">💰 $<span id="money">1000</span></div>
             </div>
         </header>
 
-        <aside class="side-panel">
-            <div class="silo-status" style="pointer-events: auto;">🧺 SILO: <span id="silo-text">0/50</span></div>
-            <br>
-            <button class="btn-market" onclick="gameInstance.openMarket()" style="pointer-events: auto;">🏪 MERCADO</button>
+        <aside class="side-panel interactive">
+            <div class="silo-status">🧺 SILO: <span id="silo-text">0/50</span></div>
+            <button class="btn-market" onclick="gameInstance.openMarket()">🏪 MERCADO</button>
         </aside>
 
-        <div id="bubble-menu" style="pointer-events: auto;"></div>
+        <div id="bubble-menu" class="interactive"></div>
         
-        <div id="placement-ui" class="hidden" style="pointer-events: auto;">
+        <div id="placement-ui" class="hidden interactive">
             <button class="place-btn cancel" onclick="gameInstance.cancelPlacement()">❌ CANCELAR</button>
             <button class="place-btn confirm" id="btn-confirm-place" onclick="gameInstance.confirmPlacement()">✅ CONSTRUIR</button>
         </div>
     </main>
 
-    <div id="mission-modal" class="modal-hidden" style="pointer-events: auto;">
+    <div id="mission-modal" class="modal-hidden interactive">
         <div class="modal-content mission-content">
             <button class="close-btn" onclick="gameInstance.closeMissionModal()">X</button>
             <h2>📋 PEDIDO ESPECIAL</h2>
@@ -66,7 +161,7 @@
         </div>
     </div>
 
-    <div id="market-modal" class="modal-hidden" style="pointer-events: auto;">
+    <div id="market-modal" class="modal-hidden interactive">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>🏪 MERCADO</h2>
@@ -74,6 +169,7 @@
                 <button class="close-btn" onclick="gameInstance.closeMarket()">X</button>
             </div>
             <div class="market-grid">
+                
                 <div class="market-section">
                     <h3>💰 Vender (No Silo)</h3>
                     <div class="sell-grid">
@@ -136,6 +232,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="game.js?v=99999"></script>
+    <script src="game.js?v=RockstarFinal"></script>
 </body>
 </html>
